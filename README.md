@@ -1,6 +1,6 @@
 # WA-Gateway (Laravel + Livewire + Alpine + Tailwind + Baileys v7 + PM2)
 
-Aplikasi WhatsApp Gateway terpadu yang menggabungkan dashboard/API **Laravel 10 + Livewire 3 + Alpine.js + Tailwind CSS** dan engine **Baileys v7 (Node.js)** dalam **1 folder project, 1 file `.env`, dan 1 database (MySQL Laravel)**.
+Aplikasi WhatsApp Gateway terpadu yang menggabungkan dashboard/API **Laravel 10 + Livewire 3 + Alpine.js + Tailwind CSS** dan engine **Baileys v7 (Node.js)**.
 
 ## Struktur Folder Utama
 
@@ -47,7 +47,7 @@ BAILEYS_V7_SESSIONS_DIR="../storage/app/baileys-sessions"
    - Pastikan Apache virtual host `http://wa-gateway.local` sudah mengarah ke `wa-gateway/public`.
    - Alternatif tanpa server Apache: jalankan `php artisan serve --port=8000` (dan ubah `APP_URL` & `BAILEYS_V7_WEBHOOK_URL` ke `http://127.0.0.1:8000`).
 
-2. **Install Dependensi (jika clone baru):**
+2. **Install Dependensi:**
    ```powershell
    composer install
    npm run wa:install

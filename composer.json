@@ -1,7 +1,7 @@
 {
     "name": "laravel/laravel",
     "type": "project",
-    "description": "WA-Gateway — Unified Laravel + Livewire + Baileys v7 WhatsApp Gateway",
+    "description": "WA-Gateway — WhatsApp Gateway dengan Baileys v7 dan Front-end Laravel + Livewire",
     "keywords": [
         "laravel",
         "livewire",
