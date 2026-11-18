@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\BaileysAPIWebhookController;
 use App\Http\Controllers\BaileysV7APIWebhookController;
 use App\Livewire\Dashboard;
 use App\Livewire\DeviceManager;
@@ -36,8 +35,6 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// Webhooks (CSRF-exempt in VerifyCsrfToken)
-Route::post('webhook/baileys', [BaileysAPIWebhookController::class, 'handle'])
-    ->name('webhook.baileys');
+// Webhook Baileys v7 (CSRF-exempt in VerifyCsrfToken)
 Route::post('webhook/baileys-v7', [BaileysV7APIWebhookController::class, 'handle'])
     ->name('webhook.baileys.v7');

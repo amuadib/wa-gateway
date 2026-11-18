@@ -29,7 +29,6 @@ Pastikan variabel berikut sesuai dengan environment Anda:
 
 ```dotenv
 APP_URL=http://wa-gateway.local
-WHATSAPP_API="baileys-v7"
 
 BAILEYS_V7_HOST=127.0.0.1
 BAILEYS_V7_PORT=3000
