@@ -83,6 +83,19 @@ BAILEYS_V7_SESSIONS_DIR="../storage/app/baileys-sessions"
   - Jalankan hanya `wa-baileys` lewat PM2 (`pm2 start ecosystem.config.cjs --only wa-baileys --env production && pm2 save && pm2 startup`).
   - Jalankan scheduler Laravel lewat **Cron Job** sistem (`* * * * * php /path/to/wa-gateway/artisan schedule:run >> /dev/null 2>&1`).
 
+## Peringatan Penggunaan
+
+> [!WARNING]
+> **Otomasi WhatsApp dengan Baileys bukan merupakan API resmi dari WhatsApp / Meta.**
+
+Harap perhatikan beberapa hal berikut sebelum menggunakan aplikasi ini:
+
+- **Risiko Pemblokiran Akun:** Library `@whiskeysockets/baileys` menggunakan protokol WhatsApp Web secara tidak resmi (*unofficial*). Aktivitas seperti pengiriman pesan massal (*blast*/spam), pengiriman terlalu cepat, atau laporan dari penerima berisiko menyebabkan nomor dibatasi sementara hingga **diblokir permanen** oleh WhatsApp.
+- **Gunakan Secara Bijak:** Disarankan hanya untuk notifikasi transaksional atau informasi yang memang diharapkan oleh penerima, dengan jeda pengiriman yang wajar, serta menggunakan nomor khusus (bukan nomor pribadi/utama yang krusial).
+- **Perubahan Protokol:** Sewaktu-waktu WhatsApp dapat memperbarui protokolnya sehingga koneksi Baileys terganggu sampai tersedia pembaruan library.
+- **Alternatif Resmi:** Untuk kebutuhan bisnis skala besar atau operasional kritis yang membutuhkan SLA resmi, gunakan **WhatsApp Business Cloud API (Meta)**.
+- **Tanggung Jawab:** Segala risiko penggunaan—termasuk pemblokiran nomor atau gangguan layanan—sepenuhnya menjadi tanggung jawab pengguna. Proyek ini tidak berafiliasi dengan, disponsori, atau didukung oleh WhatsApp LLC maupun Meta Platforms, Inc.
+
 ## Lisensi
 
 WA-Gateway adalah perangkat lunak open-source yang dirilis di bawah [MIT License](LICENSE) dengan harapan bisa bermanfaat bagi banyak orang.
