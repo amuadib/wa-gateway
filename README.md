@@ -11,8 +11,8 @@ wa-gateway/
 │   ├── Livewire/                 # Dashboard, Message, Device, Token, Group, User
 │   └── Services/                 # BaileysService, WhatsAppService, TelegramService
 ├── baileys/                      # Engine WhatsApp Node.js (@whiskeysockets/baileys v7)
-│   ├── index.js                  # Membaca ../.env (tanpa DB terpisah)
-│   ├── scheduler.js              # Scheduler Windows-safe (tanpa popup cmd.exe)
+│   ├── index.js                  # Membaca ../.env
+│   ├── scheduler.js              # Scheduler Windows-safe
 │   └── package.json
 ├── resources/views/              # Layout responsif & komponen Blade + Tailwind + Alpine
 ├── storage/
@@ -28,25 +28,25 @@ wa-gateway/
 Pastikan variabel berikut sesuai dengan environment Anda:
 
 ```dotenv
-APP_URL=http://wa-gateway.lol
+APP_URL=http://wa-gateway.local
 WHATSAPP_API="baileys-v7"
 
 BAILEYS_V7_HOST=127.0.0.1
 BAILEYS_V7_PORT=3000
 BAILEYS_V7_API_URL="http://127.0.0.1:3000"
 BAILEYS_V7_API_KEY=isi_token_rahasia_anda
-BAILEYS_V7_WEBHOOK_URL="http://wa-gateway.lol/webhook/baileys-v7"
+BAILEYS_V7_WEBHOOK_URL="http://wa-gateway.local/webhook/baileys-v7"
 BAILEYS_V7_WEBHOOK_INSECURE=true
 BAILEYS_V7_SESSIONS_DIR="../storage/app/baileys-sessions"
 ```
 
 > Untuk production dengan SSL valid, ubah `BAILEYS_V7_WEBHOOK_INSECURE=false` dan arahkan `APP_URL` serta `BAILEYS_V7_WEBHOOK_URL` ke domain HTTPS production.
 
-## Menjalankan di Development (Windows 11 + Laragon + PM2)
+## Menjalankan di Development (Windows + Apache + PM2)
 
-1. **Web Server (Laragon):**
-   - Pastikan Laragon sudah berjalan dan reload Apache agar virtual host `http://wa-gateway.lol` mengarah ke `wa-gateway/public`.
-   - Alternatif tanpa Laragon: jalankan `php artisan serve --port=8000` (dan ubah `APP_URL` & `BAILEYS_V7_WEBHOOK_URL` ke `http://127.0.0.1:8000`).
+1. **Web Server:**
+   - Pastikan Apache virtual host `http://wa-gateway.local` sudah mengarah ke `wa-gateway/public`.
+   - Alternatif tanpa server Apache: jalankan `php artisan serve --port=8000` (dan ubah `APP_URL` & `BAILEYS_V7_WEBHOOK_URL` ke `http://127.0.0.1:8000`).
 
 2. **Install Dependensi (jika clone baru):**
    ```powershell
@@ -75,9 +75,20 @@ BAILEYS_V7_SESSIONS_DIR="../storage/app/baileys-sessions"
 5. **Cek Health Endpoint:**
    Buka `http://127.0.0.1:3000/health` untuk memastikan service Baileys aktif dan mengarah ke webhook yang benar.
 
-## Catatan Auto-Start di Windows 11 vs Linux Production
+## Catatan Auto-Start di Windows vs Linux
 
-- **Windows 11 (Development):** Cukup jalankan `npm run wa:start` saat mulai ngoding. Jika ingin otomatis jalan saat login Windows, simpan daftar proses dengan `pm2 save` lalu buat **Task Scheduler** (Trigger: *At log on*, Action: `pm2 resurrect`).
-- **Linux / VPS / Plesk (Production):**
+- **Windows:** 
+   - Cukup jalankan `npm run wa:start` saat mulai. 
+   - Jika ingin otomatis jalan saat login Windows, simpan daftar proses dengan `pm2 save` lalu buat **Task Scheduler** (Trigger: *At log on*, Action: `pm2 resurrect`).
+- **Linux:**
   - Jalankan hanya `wa-baileys` lewat PM2 (`pm2 start ecosystem.config.cjs --only wa-baileys --env production && pm2 save && pm2 startup`).
   - Jalankan scheduler Laravel lewat **Cron Job** sistem (`* * * * * php /path/to/wa-gateway/artisan schedule:run >> /dev/null 2>&1`).
+
+## Lisensi
+
+WA-Gateway adalah perangkat lunak open-source yang dirilis di bawah [MIT License](LICENSE) dengan harapan bisa bermanfaat bagi banyak orang.
+
+## Sponsor
+
+Buy me a coffee (or tea, or snacks) :) [Ko-Fi](https://ko-fi.com/amuadib)
+

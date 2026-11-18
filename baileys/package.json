@@ -2,6 +2,7 @@
   "name": "wa-gateway-baileys",
   "version": "1.0.0",
   "description": "Integrated Baileys v7 WhatsApp engine for wa-gateway (Laravel + PM2)",
+  "license": "MIT",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
