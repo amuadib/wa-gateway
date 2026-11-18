@@ -1,0 +1,18 @@
+{
+  "name": "wa-gateway-baileys",
+  "version": "1.0.0",
+  "description": "Integrated Baileys v7 WhatsApp engine for wa-gateway (Laravel + PM2)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --use-system-ca index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc.14",
+    "axios": "^1.4.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "p-limit": "^3.1.0",
+    "qrcode": "^1.5.1"
+  }
+}

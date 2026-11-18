@@ -1,0 +1,24 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "wa:install": "npm --prefix baileys install",
+        "wa:start": "pm2 start ecosystem.config.cjs",
+        "wa:stop": "pm2 stop ecosystem.config.cjs",
+        "wa:restart": "pm2 restart ecosystem.config.cjs",
+        "wa:delete": "pm2 delete ecosystem.config.cjs",
+        "wa:status": "pm2 status",
+        "wa:logs": "pm2 logs wa-baileys"
+    },
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.6",
+        "@tailwindcss/typography": "^0.5.10",
+        "autoprefixer": "^10.4.16",
+        "laravel-vite-plugin": "^0.8.0",
+        "postcss": "^8.4.31",
+        "tailwindcss": "^3.3.3",
+        "vite": "^4.0.0"
+    }
+}
