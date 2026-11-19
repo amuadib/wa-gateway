@@ -210,63 +210,65 @@
 
     {{-- Modal: Create / Edit Pesan --}}
     @if($showFormModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[1px]" x-data @keydown.escape.window="$wire.set('showFormModal', false)">
-            <div class="card w-full max-w-lg overflow-hidden shadow-xl" @click.outside="$wire.set('showFormModal', false)">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showFormModal', false)">
+            <div class="card w-full max-w-lg sm:max-w-xl my-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden shadow-2xl" @click.outside="$wire.set('showFormModal', false)">
+                <div class="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
+                    <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
                         {{ $editingId ? 'Edit Pesan Antrian' : 'Kirim Pesan Baru' }}
                     </h3>
-                    <button wire:click="$set('showFormModal', false)" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200">
+                    <button wire:click="$set('showFormModal', false)" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition" aria-label="Tutup">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
 
-                <form wire:submit="saveMessage" class="p-5 space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="label-field">Aplikasi</label>
-                            <select wire:model="formToken" class="input-field" required>
-                                <option value="">Pilih aplikasi...</option>
-                                @foreach($tokens as $tokValue => $tokName)
-                                    <option value="{{ $tokValue }}">{{ $tokName }}</option>
-                                @endforeach
-                            </select>
-                            @error('formToken') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="label-field">Device (Opsional)</label>
-                            <select wire:model="formSessionId" class="input-field">
-                                <option value="">Otomatis (sesuai grup)</option>
-                                @foreach($devices as $devId)
-                                    <option value="{{ $devId }}">{{ $devId }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="label-field">Nomor HP</label>
-                            <div class="flex">
-                                <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 px-3 text-xs font-medium text-slate-500 dark:text-slate-400">+62</span>
-                                <input wire:model="formNumber" type="text" placeholder="81234567890" class="input-field rounded-l-none" required>
+                <form wire:submit="saveMessage" class="flex flex-col flex-1 overflow-hidden min-h-0">
+                    <div class="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="label-field">Aplikasi</label>
+                                <select wire:model="formToken" class="input-field" required>
+                                    <option value="">Pilih aplikasi...</option>
+                                    @foreach($tokens as $tokValue => $tokName)
+                                        <option value="{{ $tokValue }}">{{ $tokName }}</option>
+                                    @endforeach
+                                </select>
+                                @error('formToken') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
                             </div>
-                            <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Tanpa awalan 0, atau awali dengan + untuk luar negeri.</p>
-                            @error('formNumber') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                            <div>
+                                <label class="label-field">Device (Opsional)</label>
+                                <select wire:model="formSessionId" class="input-field">
+                                    <option value="">Otomatis (sesuai grup)</option>
+                                    @foreach($devices as $devId)
+                                        <option value="{{ $devId }}">{{ $devId }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="label-field">Nomor HP</label>
+                                <div class="flex">
+                                    <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 px-3 text-xs font-medium text-slate-500 dark:text-slate-400">+62</span>
+                                    <input wire:model="formNumber" type="text" placeholder="81234567890" class="input-field rounded-l-none" required>
+                                </div>
+                                <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Tanpa awalan 0, atau awali dengan + untuk luar negeri.</p>
+                                @error('formNumber') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="label-field">Nama Penerima (Opsional)</label>
+                                <input wire:model="formName" type="text" placeholder="Nama penerima" class="input-field">
+                            </div>
+                        </div>
+
                         <div>
-                            <label class="label-field">Nama Penerima (Opsional)</label>
-                            <input wire:model="formName" type="text" placeholder="Nama penerima" class="input-field">
+                            <label class="label-field">Isi Pesan</label>
+                            <textarea wire:model="formMessage" rows="5" placeholder="Tulis pesan WhatsApp (*tebal*, _miring_, ~coret~)..." class="input-field" required></textarea>
+                            @error('formMessage') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
                         </div>
                     </div>
 
-                    <div>
-                        <label class="label-field">Isi Pesan</label>
-                        <textarea wire:model="formMessage" rows="4" placeholder="Tulis pesan WhatsApp (*tebal*, _miring_, ~coret~)..." class="input-field" required></textarea>
-                        @error('formMessage') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
                         <button type="button" wire:click="$set('showFormModal', false)" class="btn-secondary text-xs">Batal</button>
                         <button type="submit" class="btn-primary text-xs">
                             {{ $editingId ? 'Simpan Perubahan' : 'Masukkan Antrian' }}
@@ -283,23 +285,36 @@
             $vNum = (string) $viewingMessage->number;
             $vDisplayNum = ($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum;
         @endphp
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[1px]" x-data @keydown.escape.window="$wire.set('showViewModal', false)">
-            <div class="card w-full max-w-lg overflow-hidden shadow-xl" @click.outside="$wire.set('showViewModal', false)">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showViewModal', false)">
+            <div class="card w-full max-w-lg sm:max-w-xl md:max-w-2xl my-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden shadow-2xl" @click.outside="$wire.set('showViewModal', false)">
+                {{-- Header Modal (Sticky/Fixed) --}}
+                <div class="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
                     <div>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Detail Pesan #{{ $viewingMessage->id }}</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Detail Pesan #{{ $viewingMessage->id }}</h3>
+                            @if($viewingMessage->status === 'FAILED' || $viewingMessage->sent == 99)
+                                <span class="rounded-full bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:text-rose-300 ring-1 ring-inset ring-rose-200 dark:ring-rose-500/20">Gagal</span>
+                            @elseif($viewingMessage->status == '4')
+                                <span class="rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">Dibaca</span>
+                            @elseif($viewingMessage->status == '3')
+                                <span class="rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-500/20">Terkirim</span>
+                            @else
+                                <span class="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-400">Pending</span>
+                            @endif
+                        </div>
                         <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">{{ $viewingMessage->created_at?->format('d F Y, H:i:s') }}</p>
                     </div>
-                    <button wire:click="$set('showViewModal', false)" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200">
+                    <button wire:click="$set('showViewModal', false)" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition" aria-label="Tutup">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
 
-                <div class="p-5 space-y-4 text-xs">
-                    <dl class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3.5 border border-slate-100 dark:border-slate-800">
+                {{-- Body Modal (Scrollable) --}}
+                <div class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
+                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3 sm:p-3.5 border border-slate-100 dark:border-slate-800">
                         <div>
                             <dt class="text-slate-400 dark:text-slate-500">Aplikasi</dt>
-                            <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100">{{ $viewingMessage->app->name ?? $viewingMessage->token }}</dd>
+                            <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100 break-words">{{ $viewingMessage->app->name ?? $viewingMessage->token }}</dd>
                         </div>
                         <div>
                             <dt class="text-slate-400 dark:text-slate-500">Device</dt>
@@ -316,8 +331,12 @@
                     </dl>
 
                     <div>
-                        <div class="text-slate-400 dark:text-slate-500 mb-1.5 font-medium">Isi Pesan</div>
-                        <div class="rounded-xl border border-emerald-200/60 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-4 text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-slate-400 dark:text-slate-500 font-medium">Isi Pesan</span>
+                            <span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">{{ strlen($viewingMessage->message) }} karakter</span>
+                        </div>
+                        {{-- Scrollable container khusus isi pesan panjang --}}
+                        <div class="rounded-xl border border-emerald-200/60 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-3.5 sm:p-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line break-words max-h-48 sm:max-h-64 md:max-h-80 overflow-y-auto overscroll-contain shadow-inner selection:bg-emerald-200 dark:selection:bg-emerald-800">
                             {!! \App\Services\WhatsAppService::format_message(e($viewingMessage->message)) !!}
                         </div>
                     </div>
@@ -328,19 +347,20 @@
                             <p class="font-mono text-[11px] break-all">{{ $viewingMessage->error }}</p>
                         </div>
                     @endif
+                </div>
 
-                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <button wire:click="deleteSingle({{ $viewingMessage->id }})" wire:confirm="Hapus pesan ini?" class="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700">
-                            Hapus Pesan
-                        </button>
-                        <div class="flex items-center gap-2">
-                            @if($viewingMessage->status === 'FAILED' || $viewingMessage->sent == 99)
-                                <button wire:click="retrySingle({{ $viewingMessage->id }})" class="btn-primary text-xs">
-                                    Kirim Ulang
-                                </button>
-                            @endif
-                            <button wire:click="$set('showViewModal', false)" class="btn-secondary text-xs">Tutup</button>
-                        </div>
+                {{-- Footer Modal (Sticky/Fixed) --}}
+                <div class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                    <button wire:click="deleteSingle({{ $viewingMessage->id }})" wire:confirm="Hapus pesan ini?" class="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition">
+                        Hapus Pesan
+                    </button>
+                    <div class="flex items-center gap-2">
+                        @if($viewingMessage->status === 'FAILED' || $viewingMessage->sent == 99)
+                            <button wire:click="retrySingle({{ $viewingMessage->id }})" class="btn-primary text-xs">
+                                Kirim Ulang
+                            </button>
+                        @endif
+                        <button wire:click="$set('showViewModal', false)" class="btn-secondary text-xs">Tutup</button>
                     </div>
                 </div>
             </div>
