@@ -30,9 +30,19 @@ class Pm2Service
         $this->clearHealthCache();
 
         if ($result['ok']) {
-            $this->waitForHealth(true, 4);
+            $isHealthy = $this->waitForHealth(true, 4);
+            if ($isHealthy) {
+                return ['ok' => true, 'message' => "Proses {$target} berhasil dijalankan."];
+            }
 
-            return ['ok' => true, 'message' => "Proses {$target} berhasil dijalankan."];
+            $recentError = $this->getRecentPm2Error();
+            $url = (string) env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000');
+            $msg = "Perintah start PM2 terkirim, namun engine belum merespons di {$url}.";
+            if ($recentError) {
+                $msg .= " Error log: {$recentError}";
+            }
+
+            return ['ok' => false, 'message' => $msg];
         }
 
         return ['ok' => false, 'message' => "Gagal menjalankan {$target}: ".$result['output']];
@@ -52,9 +62,19 @@ class Pm2Service
         $this->clearHealthCache();
 
         if ($result['ok']) {
-            $this->waitForHealth(true, 4);
+            $isHealthy = $this->waitForHealth(true, 4);
+            if ($isHealthy) {
+                return ['ok' => true, 'message' => "Proses {$target} berhasil di-restart."];
+            }
 
-            return ['ok' => true, 'message' => "Proses {$target} berhasil di-restart."];
+            $recentError = $this->getRecentPm2Error();
+            $url = (string) env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000');
+            $msg = "Perintah restart PM2 terkirim, namun engine belum merespons di {$url}.";
+            if ($recentError) {
+                $msg .= " Error log: {$recentError}";
+            }
+
+            return ['ok' => false, 'message' => $msg];
         }
 
         return ['ok' => false, 'message' => "Gagal me-restart {$target}: ".$result['output']];
@@ -80,12 +100,36 @@ class Pm2Service
         return ['ok' => false, 'message' => "Gagal mematikan {$target}: ".$result['output']];
     }
 
+    public function getRecentPm2Error(int $lines = 4): ?string
+    {
+        $logFile = storage_path('logs/pm2-baileys-error.log');
+        if (! $this->safeIsFile($logFile)) {
+            return null;
+        }
+
+        try {
+            $content = @file_get_contents($logFile);
+            if (! $content) {
+                return null;
+            }
+            $allLines = array_values(array_filter(array_map('trim', explode("\n", $content))));
+            if (empty($allLines)) {
+                return null;
+            }
+            $slice = array_slice($allLines, -$lines);
+
+            return implode("\n", $slice);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     protected function clearHealthCache(): void
     {
         Cache::forget('baileys_engine_health');
     }
 
-    protected function waitForHealth(bool $expectOnline, int $maxSeconds): void
+    protected function waitForHealth(bool $expectOnline, int $maxSeconds): bool
     {
         $baileys = app(BaileysService::class);
         $deadline = microtime(true) + $maxSeconds;
@@ -94,9 +138,11 @@ class Pm2Service
             usleep(400_000);
             $health = $baileys->health(fresh: true);
             if ($health['online'] === $expectOnline) {
-                break;
+                return true;
             }
         }
+
+        return false;
     }
 
     protected function runPm2(array $args): array

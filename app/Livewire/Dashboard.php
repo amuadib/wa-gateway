@@ -84,6 +84,9 @@ class Dashboard extends Component
             ->get();
 
         $engine = $baileys->health();
+        $recentError = !($engine['online'] ?? false)
+            ? app(Pm2Service::class)->getRecentPm2Error(5)
+            : null;
 
         return view('livewire.dashboard', [
             'stats' => $stats,
@@ -95,6 +98,7 @@ class Dashboard extends Component
             'tokenNames' => $tokenNames,
             'recentMessages' => $recentMessages,
             'engine' => $engine,
+            'recentError' => $recentError,
         ]);
     }
 }

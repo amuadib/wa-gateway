@@ -230,8 +230,19 @@
                         </button>
                     </div>
                 @else
-                    <div class="rounded-lg border border-rose-200/80 dark:border-rose-500/25 bg-rose-50/70 dark:bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
-                        Engine Node.js Baileys tidak merespons di <code class="font-mono">{{ env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000') }}</code>.
+                    <div class="space-y-2">
+                        <div class="rounded-lg border border-rose-200/80 dark:border-rose-500/25 bg-rose-50/70 dark:bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                            Engine Node.js Baileys tidak merespons di <code class="font-mono">{{ env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000') }}</code>.
+                        </div>
+                        @if(!empty($recentError))
+                            <div class="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-slate-900 text-slate-100 p-2.5 text-[11px] font-mono">
+                                <div class="text-[10px] text-slate-400 mb-1 font-sans font-medium flex items-center justify-between">
+                                    <span>pm2-baileys-error.log</span>
+                                    <span class="text-rose-400">Log Error Terakhir</span>
+                                </div>
+                                <pre class="whitespace-pre-wrap break-all leading-tight text-rose-300 max-h-32 overflow-y-auto">{{ $recentError }}</pre>
+                            </div>
+                        @endif
                     </div>
                     @if(auth()->user()?->isAdmin())
                         <div class="mt-3 grid grid-cols-3 gap-1.5">
