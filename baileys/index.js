@@ -83,6 +83,30 @@ function getSessionPath(id) {
   return path.join(SESSIONS_DIR, id);
 }
 
+function formatJid(target) {
+  if (typeof target !== "string") return "";
+  target = target.trim();
+  if (!target) return "";
+
+  // Already a full WhatsApp JID (personal or group)
+  if (target.endsWith("@s.whatsapp.net") || target.endsWith("@g.us")) {
+    return target;
+  }
+
+  if (target.includes("@")) {
+    return target;
+  }
+
+  // Group JID without suffix (e.g. 120363025123456789 or 628123456789-1612345678)
+  if (target.includes("-") || target.length >= 17) {
+    return `${target}@g.us`;
+  }
+
+  // Personal phone number: remove non-digits
+  const digits = target.replace(/[^0-9]/g, "");
+  return `${digits}@s.whatsapp.net`;
+}
+
 // ===== Express App =====
 const app = express();
 app.use(express.json());
@@ -352,15 +376,27 @@ async function createClient(id) {
     }
   });
 
-  // Incoming messages
+  // Incoming messages (Personal and Group)
   sock.ev.on("messages.upsert", async ({ messages }) => {
     try {
       const msg = messages[0];
       if (!msg || msg.key.fromMe) return;
+
+      const remoteJid = msg.key.remoteJid || "";
+      const isGroup = remoteJid.endsWith("@g.us");
+      const senderJid = isGroup ? (msg.key.participant || remoteJid) : remoteJid;
+      const cleanSender = senderJid.replace(/@.*$/, "");
+      const senderName = msg.pushName || null;
+
       const text =
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
+        msg.message?.imageMessage?.caption ||
+        msg.message?.videoMessage?.caption ||
+        msg.message?.documentMessage?.caption ||
         null;
+
+      if (!text) return;
 
       await sendWebhook({
         sessionId: id,
@@ -368,7 +404,11 @@ async function createClient(id) {
         data: {
           messages: {
             id: msg.key.id,
-            from: msg.key.remoteJid,
+            from: remoteJid,
+            sender: cleanSender,
+            senderJid: senderJid,
+            senderName: senderName,
+            isGroup: isGroup,
             text,
             status: "received",
           },
@@ -618,16 +658,60 @@ app.post("/api/message/send", async (req, res) => {
     }
   }
 
+  const targetJid = formatJid(number);
+  if (!targetJid) {
+    return res
+      .status(400)
+      .json({ status: false, message: "Invalid target number or group JID" });
+  }
+
   try {
     const sent = await enqueueSend(id, async () => {
-      return clients[id].sendMessage(number + "@s.whatsapp.net", {
+      return clients[id].sendMessage(targetJid, {
         text: message,
       });
     });
     res.json({
       status: true,
       message: "Message sent",
+      targetJid,
       key: sent?.key || null,
+    });
+  } catch (e) {
+    res.status(500).json({ status: false, message: e.toString() });
+  }
+});
+
+// Fetch all participating groups for a session
+app.get("/api/groups/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!isValidSessionId(id)) {
+    return res.status(400).json({ status: false, message: "Invalid session id" });
+  }
+
+  if (!clients[id] || !status[id]) {
+    return res
+      .status(503)
+      .json({ status: false, message: `Account ${id} not connected` });
+  }
+
+  try {
+    const groupData = await clients[id].groupFetchAllParticipating();
+    const groups = Object.values(groupData).map((g) => ({
+      id: g.id,
+      subject: g.subject || "(Tanpa Nama)",
+      creation: g.creation || 0,
+      owner: g.owner || null,
+      participantsCount: Array.isArray(g.participants) ? g.participants.length : 0,
+      desc: typeof g.desc === "string" ? g.desc : null,
+    }));
+
+    groups.sort((a, b) => (a.subject || "").localeCompare(b.subject || ""));
+
+    res.json({
+      status: true,
+      count: groups.length,
+      groups,
     });
   } catch (e) {
     res.status(500).json({ status: false, message: e.toString() });
@@ -650,9 +734,14 @@ app.post("/api/broadcast", async (req, res) => {
   let success = 0;
   let fail = 0;
   for (const no of numbers) {
+    const target = formatJid(no);
+    if (!target) {
+      fail++;
+      continue;
+    }
     try {
       await enqueueSend(id, async () =>
-        clients[id].sendMessage(no + "@s.whatsapp.net", { text: message })
+        clients[id].sendMessage(target, { text: message })
       );
       success++;
     } catch (_) {

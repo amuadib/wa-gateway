@@ -8,6 +8,7 @@ use Throwable;
 class BaileysService
 {
     protected string $baseUrl;
+
     protected string $apiKey;
 
     public function __construct()
@@ -20,7 +21,7 @@ class BaileysService
     {
         return Http::timeout($timeout)
             ->withHeaders([
-                'authorization' => 'Bearer ' . $this->apiKey,
+                'authorization' => 'Bearer '.$this->apiKey,
                 'accept' => 'application/json',
             ]);
     }
@@ -29,9 +30,10 @@ class BaileysService
     {
         $fetcher = function (): array {
             try {
-                $res = Http::connectTimeout(1)->timeout(2)->get($this->baseUrl . '/health');
+                $res = Http::connectTimeout(1)->timeout(2)->get($this->baseUrl.'/health');
                 if ($res->successful()) {
                     $json = $res->json() ?? [];
+
                     return [
                         'online' => true,
                         'uptime' => (int) ($json['uptime'] ?? 0),
@@ -65,50 +67,83 @@ class BaileysService
     public function createSession(string $id): array
     {
         try {
-            $res = $this->client(10)->post($this->baseUrl . '/api/sessions/create', ['id' => $id]);
+            $res = $this->client(10)->post($this->baseUrl.'/api/sessions/create', ['id' => $id]);
+
             return $res->json() ?? ['status' => $res->successful(), 'message' => 'OK'];
         } catch (Throwable $e) {
-            return ['status' => false, 'message' => 'Engine Baileys tidak dapat dihubungi: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Engine Baileys tidak dapat dihubungi: '.$e->getMessage()];
         }
     }
 
     public function reconnectSession(string $id): array
     {
         try {
-            $res = $this->client(15)->get($this->baseUrl . '/api/sessions/' . rawurlencode($id) . '/reconnect');
+            $res = $this->client(15)->get($this->baseUrl.'/api/sessions/'.rawurlencode($id).'/reconnect');
+
             return $res->json() ?? ['status' => $res->successful(), 'message' => 'Reconnect diproses'];
         } catch (Throwable $e) {
-            return ['status' => false, 'message' => 'Gagal reconnect: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Gagal reconnect: '.$e->getMessage()];
         }
     }
 
     public function validateSession(string $id): array
     {
         try {
-            $res = $this->client(6)->get($this->baseUrl . '/api/sessions/' . rawurlencode($id) . '/validate');
+            $res = $this->client(6)->get($this->baseUrl.'/api/sessions/'.rawurlencode($id).'/validate');
+
             return $res->json() ?? ['status' => false, 'message' => 'Tidak ada respon'];
         } catch (Throwable $e) {
-            return ['status' => false, 'message' => 'Gagal cek status: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Gagal cek status: '.$e->getMessage()];
         }
     }
 
     public function deleteSession(string $id): array
     {
         try {
-            $res = $this->client(10)->delete($this->baseUrl . '/api/sessions/' . rawurlencode($id));
+            $res = $this->client(10)->delete($this->baseUrl.'/api/sessions/'.rawurlencode($id));
+
             return $res->json() ?? ['status' => $res->successful(), 'message' => 'Session dihapus'];
         } catch (Throwable $e) {
-            return ['status' => false, 'message' => 'Gagal hapus di engine: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Gagal hapus di engine: '.$e->getMessage()];
+        }
+    }
+
+    public function fetchGroups(string $sessionId): array
+    {
+        try {
+            $res = $this->client(12)->get($this->baseUrl.'/api/groups/'.rawurlencode($sessionId));
+            if ($res->successful()) {
+                $json = $res->json() ?? [];
+
+                return [
+                    'status' => true,
+                    'groups' => $json['groups'] ?? [],
+                    'count' => (int) ($json['count'] ?? 0),
+                ];
+            }
+
+            return [
+                'status' => false,
+                'groups' => [],
+                'message' => $res->json('message') ?? 'Gagal memuat grup dari device.',
+            ];
+        } catch (Throwable $e) {
+            return [
+                'status' => false,
+                'groups' => [],
+                'message' => 'Gagal memuat grup: '.$e->getMessage(),
+            ];
         }
     }
 
     public function testWebhook(): array
     {
         try {
-            $res = $this->client(10)->get($this->baseUrl . '/api/webhook/test');
+            $res = $this->client(10)->get($this->baseUrl.'/api/webhook/test');
+
             return $res->json() ?? ['success' => $res->successful(), 'message' => 'OK'];
         } catch (Throwable $e) {
-            return ['success' => false, 'message' => 'Gagal menghubungi engine: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Gagal menghubungi engine: '.$e->getMessage()];
         }
     }
 }

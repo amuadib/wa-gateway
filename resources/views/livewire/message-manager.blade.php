@@ -4,7 +4,7 @@
         <div>
             <h2 class="text-base font-semibold text-slate-900 dark:text-white">Antrian & Riwayat Pesan</h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Pantau status pengiriman WhatsApp secara real-time
+                Pantau status pengiriman WhatsApp Personal & Grup secara real-time
                 @if($queuedCount > 0)
                     &middot; <span class="font-medium text-amber-700 dark:text-amber-400">{{ number_format($queuedCount) }} menunggu dikirim</span>
                 @endif
@@ -27,7 +27,7 @@
     </div>
 
     {{-- Filters Card --}}
-    <div class="card p-4 space-y-3">
+    <div class="card p-4 space-y-3.5">
         <div class="flex flex-col md:flex-row gap-3">
             <div class="relative flex-1">
                 <svg class="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -36,7 +36,7 @@
                 <input
                     wire:model.live.debounce.300ms="search"
                     type="search"
-                    placeholder="Cari nomor HP, nama penerima, device, atau isi pesan..."
+                    placeholder="Cari nomor HP, ID grup, pengirim, device, atau isi pesan..."
                     class="input-field pl-9"
                 >
             </div>
@@ -50,26 +50,55 @@
             </div>
         </div>
 
-        {{-- Status Filter Pills --}}
-        @php
-            $statusTabs = [
-                'all' => 'Semua',
-                'queued' => 'Antrian',
-                'PENDING' => 'Pending',
-                '3' => 'Terkirim',
-                '4' => 'Dibaca',
-                'FAILED' => 'Gagal',
-            ];
-        @endphp
-        <div class="flex flex-wrap items-center gap-1.5">
-            @foreach($statusTabs as $key => $label)
+        {{-- Filter Tabs (Target & Status) --}}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+            {{-- Target Type Tabs --}}
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mr-1">Tipe:</span>
                 <button
-                    wire:click="$set('statusFilter', '{{ $key }}')"
-                    class="px-3 py-1 rounded-full text-xs font-medium transition {{ $statusFilter === $key ? 'bg-slate-900 dark:bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700' }}"
+                    wire:click="$set('targetFilter', 'all')"
+                    class="px-2.5 py-1 rounded-full text-xs font-medium transition {{ $targetFilter === 'all' ? 'bg-slate-900 dark:bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700' }}"
                 >
-                    {{ $label }}
+                    Semua
                 </button>
-            @endforeach
+                <button
+                    wire:click="$set('targetFilter', 'personal')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition {{ $targetFilter === 'personal' ? 'bg-sky-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700' }}"
+                >
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                    <span>Personal</span>
+                </button>
+                <button
+                    wire:click="$set('targetFilter', 'group')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition {{ $targetFilter === 'group' ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700' }}"
+                >
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                    <span>Grup WA</span>
+                </button>
+            </div>
+
+            {{-- Status Filter Tabs --}}
+            @php
+                $statusTabs = [
+                    'all' => 'Semua Status',
+                    'queued' => 'Antrian',
+                    'PENDING' => 'Pending',
+                    '3' => 'Terkirim',
+                    '4' => 'Dibaca',
+                    'received' => 'Diterima',
+                    'FAILED' => 'Gagal',
+                ];
+            @endphp
+            <div class="flex flex-wrap items-center gap-1.5">
+                @foreach($statusTabs as $key => $label)
+                    <button
+                        wire:click="$set('statusFilter', '{{ $key }}')"
+                        class="px-2.5 py-1 rounded-full text-xs font-medium transition {{ $statusFilter === $key ? 'bg-slate-900 dark:bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700' }}"
+                    >
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
         </div>
     </div>
 
@@ -104,7 +133,7 @@
                             <input type="checkbox" wire:model.live="selectPage" class="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 text-emerald-600 focus:ring-emerald-500/30">
                         </th>
                         <th class="px-3 py-3">Aplikasi / Device</th>
-                        <th class="px-3 py-3">Penerima</th>
+                        <th class="px-3 py-3">Target / Penerima</th>
                         <th class="px-3 py-3">Pesan</th>
                         <th class="px-3 py-3">Status</th>
                         <th class="px-3 py-3">Waktu</th>
@@ -115,7 +144,8 @@
                     @forelse($messages as $m)
                         @php
                             $num = (string) $m->number;
-                            $displayNum = ($num !== '' && $num[0] === '+') ? $num : '+62' . $num;
+                            $isGrp = (bool) ($m->is_group || str_contains($num, '@g.us') || str_contains($num, '-'));
+                            $displayNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                         @endphp
                         <tr wire:key="msg-{{ $m->id }}" class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                             <td class="pl-4 pr-2 py-3 align-top">
@@ -126,9 +156,28 @@
                                 <div class="text-[11px] text-slate-400 dark:text-slate-500">{{ $m->sessionId ?: 'Auto device' }}</div>
                             </td>
                             <td class="px-3 py-3 align-top whitespace-nowrap">
-                                <div class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</div>
-                                @if($m->name)
-                                    <div class="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[160px]">{{ $m->name }}</div>
+                                @if($isGrp)
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-flex items-center gap-1 rounded-md bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-300 ring-1 ring-inset ring-purple-200 dark:ring-purple-500/20">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                                            Grup
+                                        </span>
+                                        <span class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[170px]" title="{{ $m->name ?: $displayNum }}">{{ $m->name ?: 'Grup WhatsApp' }}</span>
+                                    </div>
+                                    <div class="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate max-w-[170px]" title="{{ $displayNum }}">{{ $displayNum }}</div>
+                                    @if($m->sender)
+                                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Dari: +{{ $m->sender }}</div>
+                                    @endif
+                                @else
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-flex items-center gap-0.5 rounded-md bg-sky-50 dark:bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">
+                                            Personal
+                                        </span>
+                                        <span class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</span>
+                                    </div>
+                                    @if($m->name)
+                                        <div class="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[170px]">{{ $m->name }}</div>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-3 py-3 align-top max-w-xs">
@@ -145,6 +194,10 @@
                                 @elseif($m->status === 'FAILED' || $m->sent == 99)
                                     <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300 ring-1 ring-inset ring-rose-200 dark:ring-rose-500/20">
                                         Gagal
+                                    </span>
+                                @elseif($m->status === 'RECEIVED')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-200 dark:ring-violet-500/20">
+                                        Diterima
                                     </span>
                                 @elseif($m->status == '4')
                                     <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">
@@ -208,14 +261,17 @@
         @endif
     </div>
 
-    {{-- Modal: Create / Edit Pesan --}}
+    {{-- Modal: Create / Edit Pesan (Personal & Group) --}}
     @if($showFormModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showFormModal', false)">
             <div class="card w-full max-w-lg sm:max-w-xl my-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden shadow-2xl" @click.outside="$wire.set('showFormModal', false)">
                 <div class="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
-                    <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
-                        {{ $editingId ? 'Edit Pesan Antrian' : 'Kirim Pesan Baru' }}
-                    </h3>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                            {{ $editingId ? 'Edit Pesan Antrian' : 'Kirim Pesan WhatsApp' }}
+                        </h3>
+                        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Mendukung pengiriman ke Chat Personal atau Grup WhatsApp</p>
+                    </div>
                     <button wire:click="$set('showFormModal', false)" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition" aria-label="Tutup">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
@@ -223,6 +279,29 @@
 
                 <form wire:submit="saveMessage" class="flex flex-col flex-1 overflow-hidden min-h-0">
                     <div class="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
+                        {{-- Target Type Selector Tabs --}}
+                        <div>
+                            <label class="label-field mb-1.5">Tujuan Pengiriman</label>
+                            <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
+                                <button
+                                    type="button"
+                                    wire:click="setTargetType('personal')"
+                                    class="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition {{ $formTargetType === 'personal' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}"
+                                >
+                                    <svg class="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                                    <span>Chat Personal</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="setTargetType('group')"
+                                    class="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition {{ $formTargetType === 'group' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}"
+                                >
+                                    <svg class="h-4 w-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                                    <span>Grup WhatsApp</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="label-field">Aplikasi</label>
@@ -235,9 +314,23 @@
                                 @error('formToken') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="label-field">Device (Opsional)</label>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="label-field mb-0">Device</label>
+                                    @if($formTargetType === 'group')
+                                        <button
+                                            type="button"
+                                            wire:click="loadDeviceGroups"
+                                            wire:loading.attr="disabled"
+                                            wire:target="loadDeviceGroups"
+                                            class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                                        >
+                                            <span wire:loading.remove wire:target="loadDeviceGroups">🔄 Muat Grup</span>
+                                            <span wire:loading wire:target="loadDeviceGroups">Memuat...</span>
+                                        </button>
+                                    @endif
+                                </div>
                                 <select wire:model="formSessionId" class="input-field">
-                                    <option value="">Otomatis (sesuai grup)</option>
+                                    <option value="">Otomatis (sesuai grup device)</option>
                                     @foreach($devices as $devId)
                                         <option value="{{ $devId }}">{{ $devId }}</option>
                                     @endforeach
@@ -245,21 +338,60 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="label-field">Nomor HP</label>
-                                <div class="flex">
-                                    <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 px-3 text-xs font-medium text-slate-500 dark:text-slate-400">+62</span>
-                                    <input wire:model="formNumber" type="text" placeholder="81234567890" class="input-field rounded-l-none" required>
+                        {{-- Personal Target Input --}}
+                        @if($formTargetType === 'personal')
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label-field">Nomor HP</label>
+                                    <div class="flex">
+                                        <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 px-3 text-xs font-medium text-slate-500 dark:text-slate-400">+62</span>
+                                        <input wire:model="formNumber" type="text" placeholder="81234567890" class="input-field rounded-l-none" required>
+                                    </div>
+                                    <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Tanpa 0 di depan, atau awali dengan + untuk nomor internasional.</p>
+                                    @error('formNumber') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
                                 </div>
-                                <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Tanpa awalan 0, atau awali dengan + untuk luar negeri.</p>
-                                @error('formNumber') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                                <div>
+                                    <label class="label-field">Nama Penerima (Opsional)</label>
+                                    <input wire:model="formName" type="text" placeholder="Contoh: Budi Santoso" class="input-field">
+                                </div>
                             </div>
-                            <div>
-                                <label class="label-field">Nama Penerima (Opsional)</label>
-                                <input wire:model="formName" type="text" placeholder="Nama penerima" class="input-field">
+                        @else
+                            {{-- Group Target Input --}}
+                            <div class="space-y-4 rounded-xl border border-purple-200/70 dark:border-purple-500/25 bg-purple-50/40 dark:bg-purple-500/5 p-3.5">
+                                @if(!empty($deviceGroups))
+                                    <div>
+                                        <label class="label-field text-purple-900 dark:text-purple-200">Pilih dari Daftar Grup WhatsApp</label>
+                                        <select wire:model.live="formGroupJid" class="input-field">
+                                            <option value="">-- Pilih Grup yang Terdeteksi ({{ count($deviceGroups) }}) --</option>
+                                            @foreach($deviceGroups as $grp)
+                                                <option value="{{ $grp['id'] }}">{{ $grp['subject'] }} ({{ $grp['participantsCount'] }} anggota)</option>
+                                            @endforeach
+                                            <option value="manual">+ Masukkan ID Grup Manual</option>
+                                        </select>
+                                    </div>
+                                @else
+                                    <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                                        <span>Grup belum dimuat. Klik tombol untuk mengambil grup dari WhatsApp.</span>
+                                        <button type="button" wire:click="loadDeviceGroups" class="btn-secondary text-[11px] py-1 px-2.5">
+                                            Ambil Grup
+                                        </button>
+                                    </div>
+                                @endif
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="label-field">ID Grup WhatsApp (JID)</label>
+                                        <input wire:model="formNumber" type="text" placeholder="120363025123456789@g.us" class="input-field font-mono text-xs" required>
+                                        <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Format JID grup WhatsApp diakhiri dengan <code>@g.us</code>.</p>
+                                        @error('formNumber') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="label-field">Nama Grup (Opsional)</label>
+                                        <input wire:model="formName" type="text" placeholder="Contoh: Grup Alumni / Info Kantor" class="input-field">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         <div>
                             <label class="label-field">Isi Pesan</label>
@@ -283,7 +415,8 @@
     @if($showViewModal && $viewingMessage)
         @php
             $vNum = (string) $viewingMessage->number;
-            $vDisplayNum = ($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum;
+            $vIsGroup = (bool) ($viewingMessage->is_group || str_contains($vNum, '@g.us') || str_contains($vNum, '-'));
+            $vDisplayNum = $vIsGroup ? $vNum : (($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum);
         @endphp
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showViewModal', false)">
             <div class="card w-full max-w-lg sm:max-w-xl md:max-w-2xl my-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden shadow-2xl" @click.outside="$wire.set('showViewModal', false)">
@@ -292,8 +425,18 @@
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Detail Pesan #{{ $viewingMessage->id }}</h3>
-                            @if($viewingMessage->status === 'FAILED' || $viewingMessage->sent == 99)
+                            @if($vIsGroup)
+                                <span class="rounded-full bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-300 ring-1 ring-inset ring-purple-200 dark:ring-purple-500/20">Grup WA</span>
+                            @else
+                                <span class="rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">Personal</span>
+                            @endif
+
+                            @if($viewingMessage->sent == 0)
+                                <span class="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-200 dark:ring-amber-500/20">Antrian</span>
+                            @elseif($viewingMessage->status === 'FAILED' || $viewingMessage->sent == 99)
                                 <span class="rounded-full bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:text-rose-300 ring-1 ring-inset ring-rose-200 dark:ring-rose-500/20">Gagal</span>
+                            @elseif($viewingMessage->status === 'RECEIVED')
+                                <span class="rounded-full bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-200 dark:ring-violet-500/20">Diterima</span>
                             @elseif($viewingMessage->status == '4')
                                 <span class="rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">Dibaca</span>
                             @elseif($viewingMessage->status == '3')
@@ -321,13 +464,19 @@
                             <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100">{{ $viewingMessage->sessionId ?: 'Auto' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-slate-400 dark:text-slate-500">Nomor HP</dt>
-                            <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100 tabular-nums">{{ $vDisplayNum }}</dd>
+                            <dt class="text-slate-400 dark:text-slate-500">{{ $vIsGroup ? 'ID Grup (JID)' : 'Nomor HP' }}</dt>
+                            <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100 {{ $vIsGroup ? 'font-mono text-[11px] break-all' : 'tabular-nums' }}">{{ $vDisplayNum }}</dd>
                         </div>
                         <div>
-                            <dt class="text-slate-400 dark:text-slate-500">Penerima</dt>
+                            <dt class="text-slate-400 dark:text-slate-500">{{ $vIsGroup ? 'Nama Grup' : 'Penerima' }}</dt>
                             <dd class="mt-0.5 font-medium text-slate-800 dark:text-slate-100">{{ $viewingMessage->name ?: '—' }}</dd>
                         </div>
+                        @if($viewingMessage->sender)
+                            <div class="sm:col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-700/50 flex justify-between">
+                                <dt class="text-slate-400 dark:text-slate-500">Pengirim di dalam Grup</dt>
+                                <dd class="font-medium text-slate-800 dark:text-slate-200 tabular-nums">+{{ $viewingMessage->sender }}</dd>
+                            </div>
+                        @endif
                     </dl>
 
                     <div>

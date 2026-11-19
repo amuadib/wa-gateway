@@ -50,14 +50,26 @@ class SendMessageToWhatsappAPI extends Command
     public function useBaileysV7($message)
     {
         $success = false;
-        $country_code = '62';
-        if ($message->number[0] == '+') {
-            $number = substr($message->number, 1);
+        $isGroup = (bool) ($message->is_group ?? false)
+            || str_contains((string) $message->number, '@g.us')
+            || str_contains((string) $message->number, '-');
+
+        if ($isGroup) {
+            $number = trim((string) $message->number);
+            $targetLabel = '[Grup ' . ($message->name ?: $number) . ']';
         } else {
-            $number = $country_code . $message->number;
+            $rawNumber = trim((string) $message->number);
+            if ($rawNumber !== '' && $rawNumber[0] === '+') {
+                $number = substr($rawNumber, 1);
+            } elseif (str_starts_with($rawNumber, '62')) {
+                $number = $rawNumber;
+            } else {
+                $number = '62' . ltrim($rawNumber, '0');
+            }
+            $targetLabel = '+' . $number;
         }
 
-        $this->line('[' . date('Y-m-d H:i:s') . '] Mengirim pesan ke +' . $number);
+        $this->line('[' . date('Y-m-d H:i:s') . '] Mengirim pesan ke ' . $targetLabel);
 
         if ($message->sessionId == null) {
             if (env('SEND_ONLY_FROM_DEVICE_GROUP', true)) {
@@ -75,8 +87,8 @@ class SendMessageToWhatsappAPI extends Command
                     ]);
 
                     $this->error('[' . date('Y-m-d H:i:s') . '] Pengiriman pesan GAGAL. ' . $error);
-                    TelegramService::sendNotifikasi('[' . date('Y-m-d H:i:s') . '] Error: Gagal mengirim pesan ke ' . $number . '. Reason: ' . $error);
-                    Log::error('Gagal mengirim pesan ke +' . $number . '. Reason: ' . $error);
+                    TelegramService::sendNotifikasi('[' . date('Y-m-d H:i:s') . '] Error: Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
+                    Log::error('Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
                     return;
                 }
             } else {
@@ -89,8 +101,8 @@ class SendMessageToWhatsappAPI extends Command
                         'error' => $error,
                     ]);
                     $this->error('[' . date('Y-m-d H:i:s') . '] Pengiriman pesan GAGAL. ' . $error);
-                    TelegramService::sendNotifikasi('[' . date('Y-m-d H:i:s') . '] Error: Gagal mengirim pesan ke ' . $number . '. Reason: ' . $error);
-                    Log::error('Gagal mengirim pesan ke +' . $number . '. Reason: ' . $error);
+                    TelegramService::sendNotifikasi('[' . date('Y-m-d H:i:s') . '] Error: Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
+                    Log::error('Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
                     return;
                 }
                 // Jika App punya Sesi/Device yang Aktif, maka gunakan Sesi/Device tsb
@@ -118,9 +130,9 @@ class SendMessageToWhatsappAPI extends Command
                     'status' => 'FAILED',
                     'error' => $error,
                 ]);
-                TelegramService::sendNotifikasi('Gagal mengirim pesan ke +' . $number . '. Error: ' . $error);
-                Log::error('Gagal mengirim pesan ke +' . $number . '. Reason: ' . $error);
-                $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke +' . $number);
+                TelegramService::sendNotifikasi('Gagal mengirim pesan ke ' . $targetLabel . '. Error: ' . $error);
+                Log::error('Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
+                $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke ' . $targetLabel);
                 $this->error('Error: ' . $error);
                 return;
             }
@@ -144,10 +156,10 @@ class SendMessageToWhatsappAPI extends Command
                 ->json();
         } catch (ConnectionException $e) {
             $error = $e->getMessage();
-            $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke +' . $number);
+            $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke ' . $targetLabel);
             $this->error('Error: ' . $error);
-            TelegramService::sendNotifikasi('Gagal mengirim pesan ke +' . $number . '. Error: ' . $error);
-            Log::error('Gagal mengirim pesan ke +' . $number . '. Reason: ' . $error);
+            TelegramService::sendNotifikasi('Gagal mengirim pesan ke ' . $targetLabel . '. Error: ' . $error);
+            Log::error('Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $error);
             $message->update([
                 'sent' => 99,
                 'status' => 'FAILED',
@@ -167,9 +179,9 @@ class SendMessageToWhatsappAPI extends Command
                 'status' => 'FAILED',
                 'error' => $errMsg,
             ]);
-            TelegramService::sendNotifikasi('Gagal mengirim pesan ke +' . $number . '. Error: ' . $errMsg);
-            Log::error('Gagal mengirim pesan ke +' . $number . '. Reason: ' . $errMsg);
-            $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke +' . $number);
+            TelegramService::sendNotifikasi('Gagal mengirim pesan ke ' . $targetLabel . '. Error: ' . $errMsg);
+            Log::error('Gagal mengirim pesan ke ' . $targetLabel . '. Reason: ' . $errMsg);
+            $this->error('[' . date('Y-m-d H:i:s') . '] Gagal mengirim pesan ke ' . $targetLabel);
             $this->error('Error: ' . $errMsg);
         } else {
             $message->update([

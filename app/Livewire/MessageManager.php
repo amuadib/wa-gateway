@@ -5,7 +5,9 @@ namespace App\Livewire;
 use App\Models\BaileySession;
 use App\Models\Message;
 use App\Models\Token;
+use App\Services\BaileysService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -25,6 +27,9 @@ class MessageManager extends Component
     #[Url(except: 'all')]
     public string $statusFilter = 'all';
 
+    #[Url(except: 'all')]
+    public string $targetFilter = 'all'; // 'all', 'personal', 'group'
+
     #[Url(except: '')]
     public string $appFilter = '';
 
@@ -35,11 +40,17 @@ class MessageManager extends Component
     // Create / Edit Modal
     public bool $showFormModal = false;
     public ?int $editingId = null;
+    public string $formTargetType = 'personal'; // 'personal' or 'group'
     public string $formToken = '';
     public string $formNumber = '';
     public string $formName = '';
     public string $formSessionId = '';
     public string $formMessage = '';
+
+    // Group Picker
+    public string $formGroupJid = '';
+    public array $deviceGroups = [];
+    public bool $loadingGroups = false;
 
     // View Detail Modal
     public bool $showViewModal = false;
@@ -52,6 +63,12 @@ class MessageManager extends Component
     }
 
     public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+        $this->clearSelection();
+    }
+
+    public function updatedTargetFilter(): void
     {
         $this->resetPage();
         $this->clearSelection();
@@ -86,11 +103,15 @@ class MessageManager extends Component
     {
         $this->resetValidation();
         $this->editingId = null;
+        $this->formTargetType = 'personal';
         $this->formToken = Token::value('token') ?? '';
         $this->formNumber = '';
         $this->formName = '';
         $this->formSessionId = '';
         $this->formMessage = '';
+        $this->formGroupJid = '';
+        $this->deviceGroups = [];
+        $this->loadingGroups = false;
         $this->showFormModal = true;
     }
 
@@ -104,38 +125,115 @@ class MessageManager extends Component
 
         $this->resetValidation();
         $this->editingId = $msg->id;
+        $this->formTargetType = ($msg->is_group || str_contains((string) $msg->number, '@g.us') || str_contains((string) $msg->number, '-'))
+            ? 'group'
+            : 'personal';
         $this->formToken = (string) $msg->token;
         $this->formNumber = (string) $msg->number;
         $this->formName = (string) ($msg->name ?? '');
         $this->formSessionId = (string) ($msg->sessionId ?? '');
         $this->formMessage = (string) $msg->message;
+        $this->formGroupJid = '';
+        $this->deviceGroups = [];
+        $this->loadingGroups = false;
         $this->showFormModal = true;
+    }
+
+    public function setTargetType(string $type): void
+    {
+        $this->formTargetType = in_array($type, ['personal', 'group'], true) ? $type : 'personal';
+        $this->resetValidation('formNumber');
+    }
+
+    public function loadDeviceGroups(BaileysService $baileys): void
+    {
+        $targetSession = $this->formSessionId;
+        if (empty($targetSession)) {
+            $first = BaileySession::where('status', 'connected')->value('id');
+            if ($first) {
+                $targetSession = $first;
+                $this->formSessionId = $first;
+            } else {
+                $this->dispatch('notify', type: 'error', message: 'Tidak ada device WhatsApp yang terhubung.');
+                return;
+            }
+        }
+
+        $this->loadingGroups = true;
+        $res = $baileys->fetchGroups($targetSession);
+        $this->loadingGroups = false;
+
+        if ($res['status'] && !empty($res['groups'])) {
+            $this->deviceGroups = $res['groups'];
+            $this->dispatch('notify', type: 'success', message: count($this->deviceGroups) . ' grup WhatsApp berhasil dimuat.');
+        } else {
+            $this->deviceGroups = [];
+            $this->dispatch('notify', type: 'error', message: $res['message'] ?? 'Tidak ada grup ditemukan pada device ini.');
+        }
+    }
+
+    public function updatedFormGroupJid(string $jid): void
+    {
+        if ($jid === '' || $jid === 'manual') {
+            return;
+        }
+
+        foreach ($this->deviceGroups as $g) {
+            if ($g['id'] === $jid) {
+                $this->formNumber = $g['id'];
+                $this->formName = $g['subject'];
+                break;
+            }
+        }
     }
 
     public function saveMessage(): void
     {
-        $this->validate([
-            'formToken' => ['required', 'string', 'max:255'],
-            'formNumber' => ['required', 'string', 'max:20'],
-            'formName' => ['nullable', 'string', 'max:255'],
-            'formSessionId' => ['nullable', 'string', 'max:100'],
-            'formMessage' => ['required', 'string'],
-        ], [], [
-            'formToken' => 'Aplikasi',
-            'formNumber' => 'Nomor HP',
-            'formName' => 'Nama',
-            'formMessage' => 'Pesan',
-        ]);
+        $isGroup = ($this->formTargetType === 'group');
 
-        $cleanNumber = $this->sanitizeNumber($this->formNumber);
-        if ($cleanNumber === '') {
-            $this->addError('formNumber', 'Format nomor HP tidak valid. Masukkan nomor tanpa 0 (contoh: 81234567890) atau dengan awalan +.');
-            return;
+        if ($isGroup) {
+            $this->validate([
+                'formToken' => ['required', 'string', 'max:255'],
+                'formNumber' => ['required', 'string', 'max:100'],
+                'formName' => ['nullable', 'string', 'max:255'],
+                'formSessionId' => ['nullable', 'string', 'max:100'],
+                'formMessage' => ['required', 'string'],
+            ], [], [
+                'formToken' => 'Aplikasi',
+                'formNumber' => 'ID Grup WhatsApp',
+                'formName' => 'Nama Grup',
+                'formMessage' => 'Pesan',
+            ]);
+
+            $cleanNumber = trim($this->formNumber);
+            if (!str_contains($cleanNumber, '@') && !str_contains($cleanNumber, '-')) {
+                $cleanNumber .= '@g.us';
+            }
+        } else {
+            $this->validate([
+                'formToken' => ['required', 'string', 'max:255'],
+                'formNumber' => ['required', 'string', 'max:25'],
+                'formName' => ['nullable', 'string', 'max:255'],
+                'formSessionId' => ['nullable', 'string', 'max:100'],
+                'formMessage' => ['required', 'string'],
+            ], [], [
+                'formToken' => 'Aplikasi',
+                'formNumber' => 'Nomor HP',
+                'formName' => 'Nama',
+                'formMessage' => 'Pesan',
+            ]);
+
+            $cleanNumber = $this->sanitizeNumber($this->formNumber);
+            if ($cleanNumber === '') {
+                $this->addError('formNumber', 'Format nomor HP tidak valid. Masukkan nomor tanpa 0 (contoh: 81234567890) atau dengan awalan +.');
+                return;
+            }
         }
 
         $payload = [
             'token' => $this->formToken,
             'number' => $cleanNumber,
+            'is_group' => $isGroup,
             'name' => $this->formName !== '' ? $this->formName : null,
             'sessionId' => $this->formSessionId !== '' ? $this->formSessionId : null,
             'message' => $this->formMessage,
@@ -217,20 +315,23 @@ class MessageManager extends Component
             ? Message::whereIn('id', $this->selected)->latest('created_at')
             : $this->baseQuery();
 
-        $rows = $query->get(['id', 'sessionId', 'name', 'number', 'message', 'status', 'error', 'created_at']);
+        $rows = $query->get(['id', 'sessionId', 'name', 'number', 'is_group', 'sender', 'message', 'status', 'error', 'created_at']);
         $filename = 'pesan-wa-' . now()->format('Ymd-His') . '.csv';
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['ID', 'Device', 'Nama', 'Nomor', 'Pesan', 'Status', 'Error', 'Waktu']);
+            fputcsv($out, ['ID', 'Device', 'Tipe', 'Nama/Grup', 'Tujuan/JID', 'Pengirim (Grup)', 'Pesan', 'Status', 'Error', 'Waktu']);
             foreach ($rows as $row) {
+                $isGrp = (bool) ($row->is_group || str_contains((string) $row->number, '@g.us') || str_contains((string) $row->number, '-'));
                 $num = (string) $row->number;
-                $formattedNum = ($num !== '' && $num[0] === '+') ? $num : '+62' . $num;
+                $formattedNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                 fputcsv($out, [
                     $row->id,
                     $row->sessionId,
+                    $isGrp ? 'Grup WA' : 'Personal',
                     $row->name,
                     $formattedNum,
+                    $row->sender ? '+' . $row->sender : '',
                     $row->message,
                     $row->status,
                     $row->error,
@@ -247,6 +348,12 @@ class MessageManager extends Component
         if ($number === '') {
             return '';
         }
+
+        // WhatsApp group target (JID or contains hyphen)
+        if (str_ends_with($number, '@g.us') || str_contains($number, '-')) {
+            return $number;
+        }
+
         if ($number[0] === '+') {
             return preg_replace('/[^+0-9]/', '', $number);
         }
@@ -265,17 +372,34 @@ class MessageManager extends Component
                 $q->where(function ($sub) use ($term) {
                     $sub->where('number', 'like', $term)
                         ->orWhere('name', 'like', $term)
+                        ->orWhere('sender', 'like', $term)
                         ->orWhere('sessionId', 'like', $term)
                         ->orWhere('message', 'like', $term);
                 });
             })
             ->when($this->appFilter !== '', fn ($q) => $q->where('token', $this->appFilter))
+            ->when($this->targetFilter !== 'all', function ($q) {
+                if ($this->targetFilter === 'group') {
+                    $q->where(function ($sub) {
+                        $sub->where('is_group', true)
+                            ->orWhere('number', 'like', '%@g.us')
+                            ->orWhere('number', 'like', '%-%');
+                    });
+                } else {
+                    $q->where(function ($sub) {
+                        $sub->where('is_group', false)
+                            ->where('number', 'not like', '%@g.us')
+                            ->where('number', 'not like', '%-%');
+                    });
+                }
+            })
             ->when($this->statusFilter !== 'all', function ($q) {
                 match ($this->statusFilter) {
                     'queued' => $q->where('sent', 0),
                     'PENDING' => $q->where('sent', 1)->where('status', 'PENDING'),
                     '3' => $q->where('status', '3'),
                     '4' => $q->where('status', '4'),
+                    'received' => $q->where('status', 'RECEIVED'),
                     'FAILED' => $q->where(fn ($s) => $s->where('status', 'FAILED')->orWhere('sent', 99)),
                     default => null,
                 };

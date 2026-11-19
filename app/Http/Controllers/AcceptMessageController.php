@@ -26,18 +26,26 @@ class AcceptMessageController extends Controller
 
         if (isset($data['data']) && is_array(json_decode($data['data'], true))) {
             foreach (json_decode($data['data'], true) as $d) {
+                $cleanNum = $this->sanitizeNumber($d['number'] ?? '');
+                if ($cleanNum === '') {
+                    continue;
+                }
+                $isGroup = str_ends_with($cleanNum, '@g.us') || str_contains($cleanNum, '-');
                 $inserts[] = [
                     'token' => $data['token'],
-                    'number' => $this->sanitizeNumber($d['number']),
-                    'name' => $d['name'],
-                    'message' => $d['message'],
-                    'sessionId' => $d['sessionId'],
+                    'number' => $cleanNum,
+                    'is_group' => $isGroup,
+                    'name' => $d['name'] ?? null,
+                    'message' => $d['message'] ?? '',
+                    'sessionId' => $d['sessionId'] ?? null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ];
             }
 
-            \App\Models\Message::insert($inserts);
+            if (!empty($inserts)) {
+                \App\Models\Message::insert($inserts);
+            }
         } else {
             if (!isset($data['number']) or $data['number'] == '') {
                 return [
@@ -51,13 +59,15 @@ class AcceptMessageController extends Controller
                     'message' => 'Invalid Message'
                 ];
             }
-            $data['number'] = $this->sanitizeNumber($data['number']);
-            if ($data['number'] == '') {
+            $cleanNum = $this->sanitizeNumber($data['number']);
+            if ($cleanNum == '') {
                 return [
                     'error' => true,
                     'message' => 'Invalid Number'
                 ];
             }
+            $data['number'] = $cleanNum;
+            $data['is_group'] = str_ends_with($cleanNum, '@g.us') || str_contains($cleanNum, '-');
             \App\Models\Message::create($data);
         }
 
@@ -69,9 +79,20 @@ class AcceptMessageController extends Controller
 
     private function sanitizeNumber($number)
     {
+        $number = trim((string) $number);
+        if ($number === '') {
+            return '';
+        }
+
+        // WhatsApp group target (e.g. 120363025123456789@g.us or 628123-456789)
+        if (str_ends_with($number, '@g.us') || str_contains($number, '-')) {
+            return $number;
+        }
+
         if ($number[0] == '+') {
             return $number;
         }
+
         $clean_number = preg_replace("/^62/", '', preg_replace("/^0/", '', preg_replace("/[^0-9]/", '', $number)));
         if (strlen($clean_number) > 13) {
             return '';

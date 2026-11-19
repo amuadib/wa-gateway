@@ -58,13 +58,37 @@ class BaileysV7APIWebhookController extends Controller
             );
         }
 
-        //Messages (delivery/read status updates & incoming messages)
+        // Messages (delivery/read status updates & incoming messages)
         if (in_array($event, ['messages.update', 'messages.upsert'], true) && isset($data['data']['messages']['id'])) {
-            Message::where('key', $data['data']['messages']['id'])
-                ->update([
-                    'status' => $data['data']['messages']['status'],
-                    'error' => ''
+            $msgData = $data['data']['messages'];
+            $msgKey = $msgData['id'];
+            $existing = Message::where('key', $msgKey)->first();
+
+            if ($existing) {
+                $existing->update([
+                    'status' => $msgData['status'] ?? $existing->status,
+                    'error' => '',
                 ]);
+            } elseif ($event === 'messages.upsert' && !empty($msgData['text'])) {
+                // Incoming message (Personal or Group)
+                $remoteJid = (string) ($msgData['from'] ?? '');
+                $isGroup = (bool) ($msgData['isGroup'] ?? str_ends_with($remoteJid, '@g.us'));
+                $defaultToken = \App\Models\Token::value('token') ?? 'INBOX';
+
+                Message::create([
+                    'token' => $defaultToken,
+                    'sessionId' => $data['sessionId'] ?? null,
+                    'number' => $remoteJid,
+                    'is_group' => $isGroup,
+                    'sender' => $msgData['sender'] ?? null,
+                    'name' => $msgData['senderName'] ?? null,
+                    'message' => $msgData['text'] ?? '',
+                    'status' => 'RECEIVED',
+                    'sent' => 1,
+                    'key' => $msgKey,
+                    'error' => null,
+                ]);
+            }
         }
         if (env('DEBUG_BAILEYS_WEBHOOK')) {
             Log::info($data);
