@@ -9,6 +9,7 @@ use Throwable;
 class Pm2Service
 {
     protected string $appName;
+
     protected string $ecosystemPath;
 
     public function __construct()
@@ -21,7 +22,7 @@ class Pm2Service
     {
         $target = $app ?: $this->appName;
 
-        if (!is_file($this->ecosystemPath)) {
+        if (! $this->safeIsFile($this->ecosystemPath)) {
             return ['ok' => false, 'message' => 'File ecosystem.config.cjs tidak ditemukan.'];
         }
 
@@ -30,10 +31,11 @@ class Pm2Service
 
         if ($result['ok']) {
             $this->waitForHealth(true, 4);
+
             return ['ok' => true, 'message' => "Proses {$target} berhasil dijalankan."];
         }
 
-        return ['ok' => false, 'message' => "Gagal menjalankan {$target}: " . $result['output']];
+        return ['ok' => false, 'message' => "Gagal menjalankan {$target}: ".$result['output']];
     }
 
     public function restart(?string $app = null): array
@@ -43,7 +45,7 @@ class Pm2Service
         $result = $this->runPm2(['restart', $target, '--update-env']);
 
         // If process does not exist in PM2 yet, fall back to starting from ecosystem
-        if (!$result['ok'] && str_contains(strtolower($result['output']), 'not found')) {
+        if (! $result['ok'] && str_contains(strtolower($result['output']), 'not found')) {
             return $this->start($target);
         }
 
@@ -51,10 +53,11 @@ class Pm2Service
 
         if ($result['ok']) {
             $this->waitForHealth(true, 4);
+
             return ['ok' => true, 'message' => "Proses {$target} berhasil di-restart."];
         }
 
-        return ['ok' => false, 'message' => "Gagal me-restart {$target}: " . $result['output']];
+        return ['ok' => false, 'message' => "Gagal me-restart {$target}: ".$result['output']];
     }
 
     public function kill(?string $app = null): array
@@ -66,6 +69,7 @@ class Pm2Service
 
         if ($result['ok']) {
             $this->waitForHealth(false, 3);
+
             return ['ok' => true, 'message' => "Proses {$target} berhasil dimatikan (killed)."];
         }
 
@@ -73,7 +77,7 @@ class Pm2Service
             return ['ok' => true, 'message' => "Proses {$target} sudah dalam keadaan mati."];
         }
 
-        return ['ok' => false, 'message' => "Gagal mematikan {$target}: " . $result['output']];
+        return ['ok' => false, 'message' => "Gagal mematikan {$target}: ".$result['output']];
     }
 
     protected function clearHealthCache(): void
@@ -110,14 +114,14 @@ class Pm2Service
             $process = new Process($command, base_path(), $env, null, 25);
             $process->run();
 
-            $output = trim($process->getOutput() . "\n" . $process->getErrorOutput());
+            $output = trim($process->getOutput()."\n".$process->getErrorOutput());
             // Keep message concise if PM2 prints ASCII banner
             $lines = array_values(array_filter(array_map('trim', explode("\n", $output))));
             $summary = implode(' | ', array_slice($lines, -3));
 
             return [
                 'ok' => $process->isSuccessful(),
-                'output' => $summary ?: 'Exit code ' . $process->getExitCode(),
+                'output' => $summary ?: 'Exit code '.$process->getExitCode(),
             ];
         } catch (Throwable $e) {
             return [
@@ -127,7 +131,7 @@ class Pm2Service
         }
     }
 
-    protected function buildCommand(array $pm2Args): ?array
+    public function buildCommand(array $pm2Args): ?array
     {
         $isWindows = DIRECTORY_SEPARATOR === '\\';
         $nodeBin = $this->resolveNodeBin($isWindows);
@@ -138,17 +142,17 @@ class Pm2Service
         }
 
         // Prefer invoking Node directly with PM2 JS entry point to avoid cmd.exe popups on Windows
-        if ($nodeBin !== null && is_file($pm2Bin) && !str_ends_with(strtolower($pm2Bin), '.cmd')) {
+        if ($nodeBin !== null && $this->isJsScript($pm2Bin)) {
             return array_merge([$nodeBin, $pm2Bin], $pm2Args);
         }
 
         return array_merge([$pm2Bin], $pm2Args);
     }
 
-    protected function resolveNodeBin(bool $isWindows): ?string
+    public function resolveNodeBin(bool $isWindows): ?string
     {
         $configured = trim((string) env('PM2_NODE_BIN', ''));
-        if ($configured !== '' && is_file($configured)) {
+        if ($configured !== '' && $this->isValidOrUntestablePath($configured)) {
             return $configured;
         }
 
@@ -166,7 +170,7 @@ class Pm2Service
             ];
 
         foreach ($candidates as $path) {
-            if (is_file($path)) {
+            if ($this->safeIsFile($path)) {
                 return $path;
             }
         }
@@ -174,24 +178,24 @@ class Pm2Service
         return $isWindows ? 'node.exe' : 'node';
     }
 
-    protected function resolvePm2Bin(bool $isWindows, ?string $nodeBin): ?string
+    public function resolvePm2Bin(bool $isWindows, ?string $nodeBin): ?string
     {
         $configured = trim((string) env('PM2_BIN', ''));
-        if ($configured !== '' && is_file($configured)) {
+        if ($configured !== '' && $this->isValidOrUntestablePath($configured)) {
             return $configured;
         }
 
         $candidates = [];
-        if ($nodeBin && is_file($nodeBin)) {
+        if ($nodeBin && $this->safeIsFile($nodeBin)) {
             $nodeDir = dirname($nodeBin);
-            $candidates[] = $nodeDir . DIRECTORY_SEPARATOR . 'node_modules' . DIRECTORY_SEPARATOR . 'pm2' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'pm2';
-            $candidates[] = dirname($nodeDir) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'node_modules' . DIRECTORY_SEPARATOR . 'pm2' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'pm2';
+            $candidates[] = $nodeDir.DIRECTORY_SEPARATOR.'node_modules'.DIRECTORY_SEPARATOR.'pm2'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'pm2';
+            $candidates[] = dirname($nodeDir).DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'node_modules'.DIRECTORY_SEPARATOR.'pm2'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'pm2';
         }
 
         if ($isWindows) {
             $appData = getenv('APPDATA') ?: '';
             if ($appData !== '') {
-                $candidates[] = $appData . '\\npm\\node_modules\\pm2\\bin\\pm2';
+                $candidates[] = $appData.'\\npm\\node_modules\\pm2\\bin\\pm2';
             }
             $candidates[] = 'C:\\Programs\\nvm4w\\nodejs\\node_modules\\pm2\\bin\\pm2';
         } else {
@@ -200,25 +204,27 @@ class Pm2Service
         }
 
         foreach ($candidates as $path) {
-            if (is_file($path)) {
+            if ($this->safeIsFile($path)) {
                 return $path;
             }
         }
 
-        return $isWindows ? null : 'pm2';
+        return 'pm2';
     }
 
     protected function buildEnvironment(string $binary): array
     {
         $env = getenv();
-        if (!is_array($env)) {
+        if (! is_array($env)) {
             $env = [];
         }
 
-        $binDir = is_file($binary) ? dirname($binary) : null;
+        $hasSeparator = str_contains($binary, '/') || str_contains($binary, '\\');
+        $binDir = $hasSeparator ? dirname($binary) : null;
+
         if ($binDir) {
             $currentPath = $env['PATH'] ?? $env['Path'] ?? '';
-            $env['PATH'] = $binDir . PATH_SEPARATOR . $currentPath;
+            $env['PATH'] = $binDir.PATH_SEPARATOR.$currentPath;
         }
 
         $pm2Home = trim((string) env('PM2_HOME', ''));
@@ -227,5 +233,102 @@ class Pm2Service
         }
 
         return $env;
+    }
+
+    /**
+     * Determine if a string path points to a JavaScript entrypoint (e.g. PM2 bin JS) rather than a binary / shell wrapper.
+     */
+    protected function isJsScript(string $path): bool
+    {
+        $lower = strtolower($path);
+        if (str_ends_with($lower, '.cmd') || str_ends_with($lower, '.bat') || str_ends_with($lower, '.exe')) {
+            return false;
+        }
+
+        return str_contains($path, '/') || str_contains($path, '\\') || str_ends_with($lower, '.js');
+    }
+
+    /**
+     * Check if a path is valid, or if open_basedir prevents checking external paths, trust explicitly configured values.
+     */
+    protected function isValidOrUntestablePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        // If it is just a command name (e.g. "node", "pm2"), rely on system PATH
+        if (! str_contains($path, '/') && ! str_contains($path, '\\')) {
+            return true;
+        }
+
+        // If open_basedir restriction is active and the path is outside the allowed directories,
+        // PHP cannot run filesystem checks on it, so we trust the explicitly configured value.
+        if ($this->isOpenBasedirActive() && ! $this->isAllowedByOpenBasedir($path)) {
+            return true;
+        }
+
+        return $this->safeIsFile($path);
+    }
+
+    /**
+     * Determine if open_basedir is active in current PHP environment.
+     */
+    protected function isOpenBasedirActive(): bool
+    {
+        return trim((string) ini_get('open_basedir')) !== '';
+    }
+
+    /**
+     * Check whether a path falls within the PHP open_basedir allowed paths.
+     */
+    protected function isAllowedByOpenBasedir(string $path): bool
+    {
+        $openBasedir = trim((string) ini_get('open_basedir'));
+        if ($openBasedir === '') {
+            return true;
+        }
+
+        $allowedDirs = array_filter(explode(PATH_SEPARATOR, $openBasedir));
+        if (empty($allowedDirs)) {
+            return true;
+        }
+
+        $normalizedPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $path);
+
+        foreach ($allowedDirs as $allowed) {
+            $allowed = rtrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, trim($allowed)), DIRECTORY_SEPARATOR);
+            if ($allowed === '') {
+                continue;
+            }
+
+            if (DIRECTORY_SEPARATOR === '\\') {
+                if (stripos($normalizedPath, $allowed) === 0) {
+                    return true;
+                }
+            } else {
+                if (str_starts_with($normalizedPath, $allowed)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Safely check if a file exists without triggering open_basedir restriction warnings.
+     */
+    protected function safeIsFile(?string $path): bool
+    {
+        if (! $path || ! is_string($path)) {
+            return false;
+        }
+
+        if (! $this->isAllowedByOpenBasedir($path)) {
+            return false;
+        }
+
+        return @is_file($path);
     }
 }

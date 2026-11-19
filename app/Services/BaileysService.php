@@ -29,7 +29,7 @@ class BaileysService
     {
         $fetcher = function (): array {
             try {
-                $res = Http::connectTimeout(1)->timeout(1.5)->get($this->baseUrl . '/health');
+                $res = Http::connectTimeout(1)->timeout(2)->get($this->baseUrl . '/health');
                 if ($res->successful()) {
                     $json = $res->json() ?? [];
                     return [
