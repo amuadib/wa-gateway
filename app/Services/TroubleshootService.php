@@ -85,7 +85,7 @@ class TroubleshootService
                 'value' => "Online (Uptime: {$uptimeHours} jam, {$health['connectedSessions']} Device Terhubung)",
                 'detail' => 'Engine Node.js Baileys v7 merespons dengan baik di ' . env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000'),
                 'can_fix_directly' => true,
-                'actions' => ['restart_engine', 'kill_engine'],
+                'actions' => auth()->user()?->isAdmin() ? ['restart_engine', 'kill_engine'] : ['restart_engine'],
                 'guide' => null,
             ];
         } else {

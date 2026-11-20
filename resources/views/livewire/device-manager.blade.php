@@ -40,30 +40,30 @@
             </div>
         </div>
 
-        @if(auth()->user()?->isAdmin())
-            <div class="flex items-center gap-1.5 shrink-0">
-                @if(!$engine['online'])
-                    <button
-                        wire:click="startBaileys"
-                        wire:loading.attr="disabled"
-                        wire:target="startBaileys,restartBaileys,killBaileys"
-                        class="btn-primary text-xs py-1.5 px-3 gap-1.5"
-                    >
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
-                        <span wire:loading.remove wire:target="startBaileys">Start</span>
-                        <span wire:loading wire:target="startBaileys">Starting...</span>
-                    </button>
-                @endif
+        <div class="flex items-center gap-1.5 shrink-0">
+            @if(!$engine['online'])
                 <button
-                    wire:click="restartBaileys"
+                    wire:click="startBaileys"
                     wire:loading.attr="disabled"
                     wire:target="startBaileys,restartBaileys,killBaileys"
-                    class="btn-secondary text-xs py-1.5 px-3 gap-1.5"
+                    class="btn-primary text-xs py-1.5 px-3 gap-1.5"
                 >
-                    <svg class="h-3.5 w-3.5" wire:loading.class="animate-spin" wire:target="restartBaileys" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                    <span wire:loading.remove wire:target="restartBaileys">Restart</span>
-                    <span wire:loading wire:target="restartBaileys">Restarting...</span>
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                    <span wire:loading.remove wire:target="startBaileys">Start</span>
+                    <span wire:loading wire:target="startBaileys">Starting...</span>
                 </button>
+            @endif
+            <button
+                wire:click="restartBaileys"
+                wire:loading.attr="disabled"
+                wire:target="startBaileys,restartBaileys,killBaileys"
+                class="btn-secondary text-xs py-1.5 px-3 gap-1.5"
+            >
+                <svg class="h-3.5 w-3.5" wire:loading.class="animate-spin" wire:target="restartBaileys" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                <span wire:loading.remove wire:target="restartBaileys">Restart</span>
+                <span wire:loading wire:target="restartBaileys">Restarting...</span>
+            </button>
+            @if(auth()->user()?->isAdmin())
                 <button
                     wire:click="killBaileys"
                     wire:confirm="Matikan proses Baileys (wa-baileys)? Semua sesi WhatsApp akan terputus sementara."
@@ -75,8 +75,8 @@
                     <span wire:loading.remove wire:target="killBaileys">Kill</span>
                     <span wire:loading wire:target="killBaileys">Killing...</span>
                 </button>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 
     {{-- Filter Bar --}}

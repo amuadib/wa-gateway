@@ -144,7 +144,6 @@ class DeviceManager extends Component
 
     public function startBaileys(Pm2Service $pm2): void
     {
-        abort_unless(auth()->user()?->isAdmin(), 403);
         $res = $pm2->start();
         $this->dispatch('engine-status-updated');
         $this->dispatch('notify', type: $res['ok'] ? 'success' : 'error', message: $res['message']);
@@ -152,7 +151,6 @@ class DeviceManager extends Component
 
     public function restartBaileys(Pm2Service $pm2): void
     {
-        abort_unless(auth()->user()?->isAdmin(), 403);
         $res = $pm2->restart();
         $this->dispatch('engine-status-updated');
         $this->dispatch('notify', type: $res['ok'] ? 'success' : 'error', message: $res['message']);
