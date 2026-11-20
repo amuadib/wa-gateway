@@ -145,7 +145,8 @@
                         @php
                             $num = (string) $m->number;
                             $isGrp = $m->is_group_target;
-                            $displayNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
+                            $isLid = str_ends_with($num, '@lid');
+                            $displayNum = ($isGrp || $isLid) ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                         @endphp
                         <tr wire:key="msg-{{ $m->id }}" class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                             <td class="pl-4 pr-2 py-3 align-top">
@@ -170,9 +171,15 @@
                                     @endif
                                 @else
                                     <div class="flex items-center gap-1.5">
-                                        <span class="inline-flex items-center gap-0.5 rounded-md bg-sky-50 dark:bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">
-                                            Personal
-                                        </span>
+                                        @if($isLid)
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-500/20" title="Nomor Privasi WhatsApp (LID)">
+                                                Privasi (LID)
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-sky-50 dark:bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">
+                                                Personal
+                                            </span>
+                                        @endif
                                         <span class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</span>
                                     </div>
                                     @if($m->name)
@@ -416,7 +423,8 @@
         @php
             $vNum = (string) $viewingMessage->number;
             $vIsGroup = $viewingMessage->is_group_target;
-            $vDisplayNum = $vIsGroup ? $vNum : (($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum);
+            $vIsLid = str_ends_with($vNum, '@lid');
+            $vDisplayNum = ($vIsGroup || $vIsLid) ? $vNum : (($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum);
         @endphp
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showViewModal', false)">
             <div class="card w-full max-w-lg sm:max-w-xl md:max-w-2xl my-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden shadow-2xl" @click.outside="$wire.set('showViewModal', false)">
@@ -427,6 +435,8 @@
                             <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Detail Pesan #{{ $viewingMessage->id }}</h3>
                             @if($vIsGroup)
                                 <span class="rounded-full bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-300 ring-1 ring-inset ring-purple-200 dark:ring-purple-500/20">Grup WA</span>
+                            @elseif($vIsLid)
+                                <span class="rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-500/20">Privasi (LID)</span>
                             @else
                                 <span class="rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-200 dark:ring-sky-500/20">Personal</span>
                             @endif

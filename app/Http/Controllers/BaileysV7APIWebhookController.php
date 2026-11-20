@@ -84,15 +84,99 @@ class BaileysV7APIWebhookController extends Controller
             } elseif ($event === 'messages.upsert' && !empty($msgData['text'])) {
                 // Incoming message (Personal or Group)
                 $isGroup = (bool) ($msgData['isGroup'] ?? false) || str_ends_with($remoteJid, '@g.us');
-                $defaultToken = \App\Models\Token::value('token') ?? 'INBOX';
+                $sessionId = $data['sessionId'] ?? null;
+                $session = $sessionId ? BaileySession::find($sessionId) : null;
+                $groupId = $session?->group_id;
+
+                $resolvedToken = null;
+                $resolvedName = $msgData['senderName'] ?? null;
+
+                // 1. Cek apakah pesan membalas (quote) pesan yang pernah dikirim/diterima sebelumnya
+                $quotedId = $msgData['quotedId'] ?? null;
+                if ($quotedId) {
+                    $quotedMsg = Message::where('key', $quotedId)->first();
+                    if ($quotedMsg && !empty($quotedMsg->token)) {
+                        $resolvedToken = $quotedMsg->token;
+                        if (empty($resolvedName) && !empty($quotedMsg->name)) {
+                            $resolvedName = $quotedMsg->name;
+                        }
+                    }
+                }
+
+                // 2. Cek riwayat percakapan dengan nomor/kontak ini pada device yang sama
+                if (!$resolvedToken && $sessionId) {
+                    $cleanSender = trim((string) ($msgData['sender'] ?? ''));
+                    $phoneNumber = trim((string) ($msgData['phoneNumber'] ?? ''));
+
+                    $searchNumbers = array_values(array_filter([
+                        $phoneNumber !== '' ? $phoneNumber : null,
+                        $cleanSender !== '' ? $cleanSender : null,
+                        $remoteJid !== '' ? $remoteJid : null,
+                    ]));
+
+                    $coreDigits = null;
+                    foreach ([$phoneNumber, $cleanSender, $remoteJid] as $cand) {
+                        if ($cand !== '' && !str_ends_with($cand, '@lid') && !str_ends_with($cand, '@g.us')) {
+                            $digits = preg_replace('/[^0-9]/', '', $cand);
+                            $cd = preg_replace('/^62/', '', ltrim($digits, '0'));
+                            if (strlen($cd) >= 8) {
+                                $coreDigits = $cd;
+                                break;
+                            }
+                        }
+                    }
+
+                    $prevQuery = Message::where('sessionId', $sessionId);
+                    if ($coreDigits || !empty($searchNumbers)) {
+                        $prevQuery->where(function ($q) use ($searchNumbers, $coreDigits) {
+                            if (!empty($searchNumbers)) {
+                                $q->whereIn('number', $searchNumbers);
+                            }
+                            if ($coreDigits) {
+                                $q->orWhere('number', 'like', "%{$coreDigits}%");
+                            }
+                        });
+                    } else {
+                        $prevQuery->where('number', $remoteJid);
+                    }
+
+                    $prevMsg = $prevQuery->latest('id')->first();
+                    if ($prevMsg && !empty($prevMsg->token)) {
+                        $resolvedToken = $prevMsg->token;
+                        if (empty($resolvedName) && !empty($prevMsg->name)) {
+                            $resolvedName = $prevMsg->name;
+                        }
+                    }
+                }
+
+                // 3. Cari Token yang berada di dalam KELOMPOK (group_id) yang sama dengan Device ini
+                if (!$resolvedToken && $groupId) {
+                    // 3a. Cek token yang paling baru/sering dipakai pada device ini yang valid di kelompoknya
+                    $lastDeviceToken = Message::where('sessionId', $sessionId)
+                        ->whereNotNull('token')
+                        ->latest('id')
+                        ->value('token');
+
+                    if ($lastDeviceToken && \App\Models\Token::where('token', $lastDeviceToken)->where('group_id', $groupId)->exists()) {
+                        $resolvedToken = $lastDeviceToken;
+                    } else {
+                        // 3b. Ambil token pertama yang terdaftar pada kelompok device ini
+                        $resolvedToken = \App\Models\Token::where('group_id', $groupId)->value('token');
+                    }
+                }
+
+                // 4. Fallback Terakhir: jika device belum ditentukan kelompoknya
+                if (!$resolvedToken) {
+                    $resolvedToken = \App\Models\Token::value('token') ?? 'INBOX';
+                }
 
                 Message::create([
-                    'token' => $defaultToken,
-                    'sessionId' => $data['sessionId'] ?? null,
+                    'token' => $resolvedToken,
+                    'sessionId' => $sessionId,
                     'number' => $remoteJid,
                     'is_group' => $isGroup,
                     'sender' => $msgData['sender'] ?? null,
-                    'name' => $msgData['senderName'] ?? null,
+                    'name' => $resolvedName,
                     'message' => $msgData['text'] ?? '',
                     'status' => 'RECEIVED',
                     'sent' => 1,

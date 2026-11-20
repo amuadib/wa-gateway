@@ -408,6 +408,25 @@ async function createClient(id) {
       const cleanSender = senderJid.replace(/@.*$/, "");
       const senderName = msg.pushName || null;
 
+      // Quoted / in-reply-to message id
+      const quotedStanzaId =
+        msg.message?.extendedTextMessage?.contextInfo?.stanzaId ||
+        msg.message?.imageMessage?.contextInfo?.stanzaId ||
+        msg.message?.videoMessage?.contextInfo?.stanzaId ||
+        msg.message?.documentMessage?.contextInfo?.stanzaId ||
+        null;
+
+      // Try resolving LID to actual phone number if sender is @lid
+      let resolvedPn = null;
+      if (senderJid && senderJid.endsWith("@lid") && sock.signalRepository?.lidMapping?.getPNForLID) {
+        try {
+          const res = await sock.signalRepository.lidMapping.getPNForLID([senderJid]);
+          if (res && res[0]?.pn) {
+            resolvedPn = res[0].pn;
+          }
+        } catch (_) {}
+      }
+
       const text =
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
@@ -431,6 +450,8 @@ async function createClient(id) {
             isGroup: isGroup,
             text,
             status: "received",
+            quotedId: quotedStanzaId,
+            phoneNumber: resolvedPn ? resolvedPn.replace(/@.*$/, "") : null,
           },
         },
         timestamp: msg.messageTimestamp,

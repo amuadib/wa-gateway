@@ -413,11 +413,13 @@ class MessageManager extends Component
             foreach ($rows as $row) {
                 $num = (string) $row->number;
                 $isGrp = (bool) ($row->is_group || str_ends_with($num, '@g.us'));
-                $formattedNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
+                $isLid = str_ends_with($num, '@lid');
+                $formattedNum = ($isGrp || $isLid) ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
+                $tipeLabel = $isGrp ? 'Grup WA' : ($isLid ? 'Personal (LID)' : 'Personal');
                 fputcsv($out, [
                     $row->id,
                     $row->sessionId,
-                    $isGrp ? 'Grup WA' : 'Personal',
+                    $tipeLabel,
                     $row->name,
                     $formattedNum,
                     $row->sender ? '+' . $row->sender : '',
