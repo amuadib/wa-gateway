@@ -7,6 +7,7 @@ use App\Livewire\DeviceManager;
 use App\Livewire\GroupManager;
 use App\Livewire\MessageManager;
 use App\Livewire\TokenManager;
+use App\Livewire\Troubleshoot;
 use App\Livewire\UserManager;
 use Illuminate\Support\Facades\Route;
 
@@ -24,14 +25,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages', MessageManager::class)->name('messages.index');
     Route::get('/devices', DeviceManager::class)->name('devices.index');
 
-    // Legacy Filament URL redirect
-    Route::redirect('/admin', '/');
-
     // Admin-only Settings
     Route::middleware('admin')->group(function () {
         Route::get('/tokens', TokenManager::class)->name('tokens.index');
         Route::get('/groups', GroupManager::class)->name('groups.index');
         Route::get('/users', UserManager::class)->name('users.index');
+        Route::get('/troubleshoot', Troubleshoot::class)->name('troubleshoot.index');
     });
 });
 

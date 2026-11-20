@@ -27,3 +27,4 @@ composer.lock
 *.zip
 *.gz
 public/hot
+public/build

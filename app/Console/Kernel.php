@@ -12,6 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        $schedule->call(function () {
+            \Illuminate\Support\Facades\Cache::put('scheduler:last_heartbeat', now()->toIso8601String(), 86400);
+        })->everyMinute()->name('scheduler-heartbeat');
+
         $schedule->command('message:send-to-api')
             ->everyMinute();
         $schedule->command('message:delete')

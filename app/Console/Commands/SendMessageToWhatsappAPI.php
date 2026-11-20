@@ -31,6 +31,8 @@ class SendMessageToWhatsappAPI extends Command
      */
     public function handle()
     {
+        \Illuminate\Support\Facades\Cache::put('message_queue:last_run', now()->toIso8601String(), 86400);
+
         // Add random "delay" in non-local environments
         if (env('APP_ENV') != 'local') {
             if (rand(1, 6) % 2 == 0) {
