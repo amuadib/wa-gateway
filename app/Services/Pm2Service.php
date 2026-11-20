@@ -320,7 +320,7 @@ class Pm2Service
     /**
      * Determine if open_basedir is active in current PHP environment.
      */
-    protected function isOpenBasedirActive(): bool
+    public function isOpenBasedirActive(): bool
     {
         return trim((string) ini_get('open_basedir')) !== '';
     }
@@ -328,7 +328,7 @@ class Pm2Service
     /**
      * Check whether a path falls within the PHP open_basedir allowed paths.
      */
-    protected function isAllowedByOpenBasedir(string $path): bool
+    public function isAllowedByOpenBasedir(string $path): bool
     {
         $openBasedir = trim((string) ini_get('open_basedir'));
         if ($openBasedir === '') {
@@ -365,7 +365,7 @@ class Pm2Service
     /**
      * Safely check if a file exists without triggering open_basedir restriction warnings.
      */
-    protected function safeIsFile(?string $path): bool
+    public function safeIsFile(?string $path): bool
     {
         if (! $path || ! is_string($path)) {
             return false;

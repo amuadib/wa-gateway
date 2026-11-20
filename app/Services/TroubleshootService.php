@@ -12,6 +12,7 @@ use Throwable;
 class TroubleshootService
 {
     protected BaileysService $baileys;
+
     protected Pm2Service $pm2;
 
     public function __construct(BaileysService $baileys, Pm2Service $pm2)
@@ -83,14 +84,14 @@ class TroubleshootService
                 'name' => 'Status Engine Baileys (HTTP)',
                 'status' => 'ok',
                 'value' => "Online (Uptime: {$uptimeHours} jam, {$health['connectedSessions']} Device Terhubung)",
-                'detail' => 'Engine Node.js Baileys v7 merespons dengan baik di ' . env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000'),
+                'detail' => 'Engine Node.js Baileys v7 merespons dengan baik di '.env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000'),
                 'can_fix_directly' => true,
                 'actions' => auth()->user()?->isAdmin() ? ['restart_engine', 'kill_engine'] : ['restart_engine'],
                 'guide' => null,
             ];
         } else {
             $recentErr = $this->pm2->getRecentPm2Error(3);
-            $detail = 'Engine Node.js Baileys tidak merespons di ' . env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000');
+            $detail = 'Engine Node.js Baileys tidak merespons di '.env('BAILEYS_V7_API_URL', 'http://127.0.0.1:3000');
             if ($recentErr) {
                 $detail .= " | Error log terakhir: {$recentErr}";
             }
@@ -113,7 +114,7 @@ class TroubleshootService
             $items['node_bin'] = [
                 'name' => 'Node.js Runtime',
                 'status' => 'ok',
-                'value' => 'Terdeteksi: ' . ($nodeVersion ?: $nodeBin),
+                'value' => 'Terdeteksi: '.($nodeVersion ?: $nodeBin),
                 'detail' => "Path: {$nodeBin}",
                 'can_fix_directly' => false,
                 'actions' => [],
@@ -175,7 +176,7 @@ class TroubleshootService
                 'detail' => 'Dependensi npm di direktori baileys/ belum terpasang.',
                 'can_fix_directly' => false,
                 'actions' => [],
-                'guide' => 'Buka terminal / SSH server, masuk ke folder baileys dan jalankan: cd ' . base_path('baileys') . ' && npm install',
+                'guide' => 'Buka terminal / SSH server, masuk ke folder baileys dan jalankan: cd '.base_path('baileys').' && npm install',
             ];
         }
 
@@ -216,17 +217,17 @@ class TroubleshootService
         // 6. Webhook URL Configuration
         $webhookUrl = (string) env('BAILEYS_V7_WEBHOOK_URL', '');
         $appUrl = (string) env('APP_URL', '');
-        if (!empty($webhookUrl)) {
-            $isLocalMismatch = str_contains($webhookUrl, 'wa-gateway.local') && !str_contains($appUrl, 'wa-gateway.local');
+        if (! empty($webhookUrl)) {
+            $isLocalMismatch = str_contains($webhookUrl, 'wa-gateway.local') && ! str_contains($appUrl, 'wa-gateway.local');
             if ($isLocalMismatch) {
                 $items['webhook_url'] = [
                     'name' => 'Konfigurasi Webhook Baileys',
                     'status' => 'warning',
                     'value' => $webhookUrl,
-                    'detail' => 'Nilai webhook masih menggunakan URL contoh (wa-gateway.local), sementara APP_URL adalah ' . $appUrl,
+                    'detail' => 'Nilai webhook masih menggunakan URL contoh (wa-gateway.local), sementara APP_URL adalah '.$appUrl,
                     'can_fix_directly' => false,
                     'actions' => [],
-                    'guide' => 'Sesuaikan variabel BAILEYS_V7_WEBHOOK_URL di file .env menjadi: ' . rtrim($appUrl, '/') . '/webhook/baileys-v7',
+                    'guide' => 'Sesuaikan variabel BAILEYS_V7_WEBHOOK_URL di file .env menjadi: '.rtrim($appUrl, '/').'/webhook/baileys-v7',
                 ];
             } else {
                 $items['webhook_url'] = [
@@ -247,7 +248,7 @@ class TroubleshootService
                 'detail' => 'Variabel BAILEYS_V7_WEBHOOK_URL belum diatur di .env.',
                 'can_fix_directly' => false,
                 'actions' => [],
-                'guide' => 'Tambahkan di file .env: BAILEYS_V7_WEBHOOK_URL="' . rtrim($appUrl, '/') . '/webhook/baileys-v7"',
+                'guide' => 'Tambahkan di file .env: BAILEYS_V7_WEBHOOK_URL="'.rtrim($appUrl, '/').'/webhook/baileys-v7"',
             ];
         }
 
@@ -317,7 +318,7 @@ class TroubleshootService
         $failedCount = Message::where('sent', 99)->orWhere('status', 'FAILED')->count();
 
         $queueValue = ($queueLastRun)
-            ? 'Terakhir diproses: ' . Carbon::parse($queueLastRun)->diffForHumans()
+            ? 'Terakhir diproses: '.Carbon::parse($queueLastRun)->diffForHumans()
             : 'Belum ada riwayat proses';
 
         $queueDetail = "Pesan antrian pending: {$pendingCount} pesan | Pesan gagal: {$failedCount} pesan";
@@ -330,7 +331,7 @@ class TroubleshootService
             'can_fix_directly' => true,
             'actions' => ['run_queue_once'],
             'guide' => ($pendingCount > 0)
-                ? 'Ada ' . $pendingCount . ' pesan menunggu dikirim. Klik "Proses Antrian Sekali" atau pastikan scheduler/cron aktif.'
+                ? 'Ada '.$pendingCount.' pesan menunggu dikirim. Klik "Proses Antrian Sekali" atau pastikan scheduler/cron aktif.'
                 : null,
         ];
 
@@ -352,10 +353,10 @@ class TroubleshootService
             $version = $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION);
 
             $items['db_connection'] = [
-                'name' => 'Koneksi Database (' . strtoupper($driver) . ')',
+                'name' => 'Koneksi Database ('.strtoupper($driver).')',
                 'status' => 'ok',
                 'value' => "Terhubung ({$dbName})",
-                'detail' => "Server version: {$version} di host " . env('DB_HOST', '127.0.0.1') . ':' . env('DB_PORT', '3306'),
+                'detail' => "Server version: {$version} di host ".env('DB_HOST', '127.0.0.1').':'.env('DB_PORT', '3306'),
                 'can_fix_directly' => false,
                 'actions' => [],
                 'guide' => null,
@@ -371,7 +372,7 @@ class TroubleshootService
                 $items['db_migrations'] = [
                     'name' => 'Tabel & Migrasi Database',
                     'status' => 'ok',
-                    'value' => 'Semua Migrasi Sudah Dijalankan (' . count($ran) . ' migrasi)',
+                    'value' => 'Semua Migrasi Sudah Dijalankan ('.count($ran).' migrasi)',
                     'detail' => 'Skema database up to date.',
                     'can_fix_directly' => false,
                     'actions' => [],
@@ -381,8 +382,8 @@ class TroubleshootService
                 $items['db_migrations'] = [
                     'name' => 'Tabel & Migrasi Database',
                     'status' => 'error',
-                    'value' => count($pending) . ' Migrasi Pending',
-                    'detail' => 'Daftar migrasi belum jalan: ' . implode(', ', array_slice($pending, 0, 3)),
+                    'value' => count($pending).' Migrasi Pending',
+                    'detail' => 'Daftar migrasi belum jalan: '.implode(', ', array_slice($pending, 0, 3)),
                     'can_fix_directly' => true,
                     'actions' => ['run_migrations'],
                     'guide' => 'Klik tombol "Jalankan Migrasi" di bawah atau jalankan php artisan migrate --force di terminal.',
@@ -393,7 +394,7 @@ class TroubleshootService
                 'name' => 'Koneksi Database',
                 'status' => 'error',
                 'value' => 'Gagal Terhubung',
-                'detail' => 'Error: ' . $e->getMessage(),
+                'detail' => 'Error: '.$e->getMessage(),
                 'can_fix_directly' => false,
                 'actions' => [],
                 'guide' => 'Periksa apakah layanan MySQL menyala dan periksa konfigurasi DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD pada file .env.',
@@ -447,7 +448,7 @@ class TroubleshootService
 
         $missingExt = [];
         foreach ($requiredExtensions as $ext => $purpose) {
-            if (!extension_loaded($ext)) {
+            if (! extension_loaded($ext)) {
                 $missingExt[] = "{$ext} ({$purpose})";
             }
         }
@@ -456,7 +457,7 @@ class TroubleshootService
             $items['php_extensions'] = [
                 'name' => 'Ekstensi PHP Inti',
                 'status' => 'ok',
-                'value' => 'Lengkap (' . count($requiredExtensions) . ' ekstensi aktif)',
+                'value' => 'Lengkap ('.count($requiredExtensions).' ekstensi aktif)',
                 'detail' => 'Semua ekstensi PHP wajib (pdo_mysql, curl, mbstring, openssl, fileinfo, dll) telah terpasang.',
                 'can_fix_directly' => false,
                 'actions' => [],
@@ -466,8 +467,8 @@ class TroubleshootService
             $items['php_extensions'] = [
                 'name' => 'Ekstensi PHP Inti',
                 'status' => 'error',
-                'value' => count($missingExt) . ' Ekstensi Hilang',
-                'detail' => 'Ekstensi belum aktif: ' . implode(', ', $missingExt),
+                'value' => count($missingExt).' Ekstensi Hilang',
+                'detail' => 'Ekstensi belum aktif: '.implode(', ', $missingExt),
                 'can_fix_directly' => false,
                 'actions' => [],
                 'guide' => 'Aktifkan ekstensi tersebut di panel hosting (Plesk -> PHP Settings -> Extensions) atau install via terminal: apt-get install php8.2-<nama-ekstensi>.',
@@ -492,10 +493,10 @@ class TroubleshootService
                 'name' => 'PHP open_basedir Restriction',
                 'status' => $baseAllowed ? 'ok' : 'warning',
                 'value' => 'Aktif',
-                'detail' => 'open_basedir aktif: ' . substr($openBasedir, 0, 80) . (strlen($openBasedir) > 80 ? '...' : ''),
+                'detail' => 'open_basedir aktif: '.substr($openBasedir, 0, 80).(strlen($openBasedir) > 80 ? '...' : ''),
                 'can_fix_directly' => false,
                 'actions' => [],
-                'guide' => 'Jika terjadi error open_basedir restriction saat start PM2 atau akses storage, tambahkan path proyek (' . base_path() . ') dan folder Node.js ke nilai open_basedir di Plesk PHP Settings.',
+                'guide' => 'Jika terjadi error open_basedir restriction saat start PM2 atau akses storage, tambahkan path proyek ('.base_path().') dan folder Node.js ke nilai open_basedir di Plesk PHP Settings.',
             ];
         }
 
@@ -518,11 +519,11 @@ class TroubleshootService
             $items['disable_functions'] = [
                 'name' => 'Fungsi Eksekusi Sistem (Shell / Process)',
                 'status' => 'warning',
-                'value' => 'Dibatasi: ' . implode(', ', $blockedNeeded),
+                'value' => 'Dibatasi: '.implode(', ', $blockedNeeded),
                 'detail' => 'Fungsi eksekusi diblokir oleh server. Start/Restart PM2 dari browser akan gagal.',
                 'can_fix_directly' => false,
                 'actions' => [],
-                'guide' => 'Hapus ' . implode(', ', $blockedNeeded) . ' dari baris disable_functions di php.ini Plesk agar fitur Start/Restart engine dari browser dapat bekerja, atau kelola proses PM2 via terminal SSH.',
+                'guide' => 'Hapus '.implode(', ', $blockedNeeded).' dari baris disable_functions di php.ini Plesk agar fitur Start/Restart engine dari browser dapat bekerja, atau kelola proses PM2 via terminal SSH.',
             ];
         }
 
@@ -559,7 +560,7 @@ class TroubleshootService
             'detail' => "Lokasi: {$logsPath}",
             'can_fix_directly' => true,
             'actions' => ['test_storage_write'],
-            'guide' => $isLogsWritable ? null : 'Berikan izin tulis: chmod -R 775 ' . $logsPath . ' && chown -R www-data:www-data ' . $logsPath,
+            'guide' => $isLogsWritable ? null : 'Berikan izin tulis: chmod -R 775 '.$logsPath.' && chown -R www-data:www-data '.$logsPath,
         ];
 
         // 2. Storage Framework (Views, Sessions, Cache)
@@ -572,7 +573,7 @@ class TroubleshootService
             'detail' => "Lokasi: {$frameworkPath}",
             'can_fix_directly' => true,
             'actions' => ['clear_cache'],
-            'guide' => $isFwWritable ? null : 'Berikan izin tulis: chmod -R 775 ' . $frameworkPath,
+            'guide' => $isFwWritable ? null : 'Berikan izin tulis: chmod -R 775 '.$frameworkPath,
         ];
 
         // 3. Bootstrap Cache
@@ -585,12 +586,12 @@ class TroubleshootService
             'detail' => "Lokasi: {$bCachePath}",
             'can_fix_directly' => true,
             'actions' => ['clear_cache'],
-            'guide' => $isBcacheWritable ? null : 'Berikan izin tulis: chmod -R 775 ' . $bCachePath,
+            'guide' => $isBcacheWritable ? null : 'Berikan izin tulis: chmod -R 775 '.$bCachePath,
         ];
 
         // 4. APP_KEY
         $appKey = env('APP_KEY');
-        $hasKey = !empty($appKey) && str_starts_with($appKey, 'base64:');
+        $hasKey = ! empty($appKey) && str_starts_with($appKey, 'base64:');
         $items['app_key'] = [
             'name' => 'Kunci Enkripsi Aplikasi (APP_KEY)',
             'status' => $hasKey ? 'ok' : 'error',
@@ -627,12 +628,12 @@ class TroubleshootService
             'pm2_start_engine' => [
                 'title' => 'PM2 Start Baileys Engine (Terminal/SSH)',
                 'description' => 'Jalankan dari root folder proyek jika engine offline:',
-                'command' => "pm2 start ecosystem.config.cjs --only wa-baileys",
+                'command' => 'pm2 start ecosystem.config.cjs --only wa-baileys',
             ],
             'pm2_start_scheduler' => [
                 'title' => 'PM2 Alternatif Scheduler (Tanpa Cron Linux/Windows)',
                 'description' => 'Jika cron server diblokir, PM2 scheduler siap pakai menjalankan antrian setiap menit:',
-                'command' => "pm2 start ecosystem.config.cjs --only wa-scheduler",
+                'command' => 'pm2 start ecosystem.config.cjs --only wa-scheduler',
             ],
             'windows_schtasks' => [
                 'title' => 'Windows Task Scheduler (CMD Administrator)',
@@ -642,7 +643,7 @@ class TroubleshootService
             'npm_install' => [
                 'title' => 'Install Paket Baileys v7',
                 'description' => 'Jalankan jika node_modules di folder baileys belum lengkap:',
-                'command' => "cd " . base_path('baileys') . " && npm install",
+                'command' => 'cd '.base_path('baileys').' && npm install',
             ],
         ];
     }
@@ -664,7 +665,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal menjalankan migrasi: ' . $e->getMessage(),
+                'message' => 'Gagal menjalankan migrasi: '.$e->getMessage(),
                 'output' => $e->getTraceAsString(),
             ];
         }
@@ -688,7 +689,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal membersihkan cache: ' . $e->getMessage(),
+                'message' => 'Gagal membersihkan cache: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -714,7 +715,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal menjalankan scheduler: ' . $e->getMessage(),
+                'message' => 'Gagal menjalankan scheduler: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -738,7 +739,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal memproses antrian: ' . $e->getMessage(),
+                'message' => 'Gagal memproses antrian: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -775,7 +776,7 @@ class TroubleshootService
     {
         $dir = $this->resolveSessionsDir();
         try {
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 mkdir($dir, 0775, true);
             }
             @chmod($dir, 0775);
@@ -788,7 +789,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal membuat direktori sesi: ' . $e->getMessage(),
+                'message' => 'Gagal membuat direktori sesi: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -799,7 +800,7 @@ class TroubleshootService
      */
     public function testStorageWrite(): array
     {
-        $testFile = storage_path('logs/test_write_' . time() . '.tmp');
+        $testFile = storage_path('logs/test_write_'.time().'.tmp');
         try {
             file_put_contents($testFile, 'write_test_ok');
             $read = @file_get_contents($testFile);
@@ -821,7 +822,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Uji tulis gagal: ' . $e->getMessage(),
+                'message' => 'Uji tulis gagal: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -844,7 +845,7 @@ class TroubleshootService
         } catch (Throwable $e) {
             return [
                 'ok' => false,
-                'message' => 'Gagal generate key: ' . $e->getMessage(),
+                'message' => 'Gagal generate key: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }
@@ -858,8 +859,9 @@ class TroubleshootService
         $configured = env('BAILEYS_V7_SESSIONS_DIR');
         if ($configured) {
             if (str_starts_with($configured, '.')) {
-                return base_path('baileys/' . $configured);
+                return base_path('baileys/'.$configured);
             }
+
             return $configured;
         }
 
@@ -883,7 +885,7 @@ class TroubleshootService
      */
     protected function executeCommandSilently(array $command): ?string
     {
-        if (!function_exists('proc_open')) {
+        if (! function_exists('proc_open')) {
             return null;
         }
 
