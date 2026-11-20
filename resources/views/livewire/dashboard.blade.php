@@ -341,7 +341,8 @@
                         @php
                             $num = (string) $m->number;
                             $isGrp = (bool) ($m->is_group || str_ends_with($num, '@g.us'));
-                            $displayNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
+                            $isLid = str_ends_with($num, '@lid');
+                            $displayNum = ($isGrp || $isLid) ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                         @endphp
                         <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                             <td class="px-5 py-3 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
@@ -352,6 +353,8 @@
                                     <span class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</span>
                                     @if($isGrp)
                                         <span class="rounded-full bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.2 text-[9px] font-medium text-purple-700 dark:text-purple-300 ring-1 ring-inset ring-purple-200 dark:ring-purple-500/20">Grup</span>
+                                    @elseif($isLid)
+                                        <span class="rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.2 text-[9px] font-medium text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-500/20" title="Nomor Privasi WhatsApp (LID)">LID</span>
                                     @endif
                                 </div>
                                 @if($m->name)
