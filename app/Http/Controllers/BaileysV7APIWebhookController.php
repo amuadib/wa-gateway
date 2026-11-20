@@ -61,6 +61,18 @@ class BaileysV7APIWebhookController extends Controller
         // Messages (delivery/read status updates & incoming messages)
         if (in_array($event, ['messages.update', 'messages.upsert'], true) && isset($data['data']['messages']['id'])) {
             $msgData = $data['data']['messages'];
+            $remoteJid = trim((string) ($msgData['from'] ?? ''));
+
+            // Abaikan WhatsApp Status, broadcast, dan channel / newsletter
+            if (
+                $remoteJid === '' ||
+                $remoteJid === 'status@broadcast' ||
+                str_ends_with($remoteJid, '@broadcast') ||
+                str_ends_with($remoteJid, '@newsletter')
+            ) {
+                return response()->json(['success' => true, 'ignored' => 'status_broadcast']);
+            }
+
             $msgKey = $msgData['id'];
             $existing = Message::where('key', $msgKey)->first();
 
@@ -71,8 +83,7 @@ class BaileysV7APIWebhookController extends Controller
                 ]);
             } elseif ($event === 'messages.upsert' && !empty($msgData['text'])) {
                 // Incoming message (Personal or Group)
-                $remoteJid = (string) ($msgData['from'] ?? '');
-                $isGroup = (bool) ($msgData['isGroup'] ?? str_ends_with($remoteJid, '@g.us'));
+                $isGroup = (bool) ($msgData['isGroup'] ?? false) || str_ends_with($remoteJid, '@g.us');
                 $defaultToken = \App\Models\Token::value('token') ?? 'INBOX';
 
                 Message::create([

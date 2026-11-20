@@ -50,15 +50,31 @@ class SendMessageToWhatsappAPI extends Command
     public function useBaileysV7($message)
     {
         $success = false;
-        $isGroup = (bool) ($message->is_group ?? false)
-            || str_contains((string) $message->number, '@g.us')
-            || str_contains((string) $message->number, '-');
+        $rawNumber = trim((string) $message->number);
+
+        // Abaikan dan gagalkan jika target adalah WhatsApp Status, Broadcast list, atau Newsletter
+        if (
+            $rawNumber === '' ||
+            $rawNumber === 'status@broadcast' ||
+            str_ends_with($rawNumber, '@broadcast') ||
+            str_ends_with($rawNumber, '@newsletter')
+        ) {
+            $error = 'Target WhatsApp Status / Broadcast / Newsletter tidak didukung untuk pengiriman pesan.';
+            $message->update([
+                'sent' => 99,
+                'status' => 'FAILED',
+                'error' => $error,
+            ]);
+            $this->error('[' . date('Y-m-d H:i:s') . '] Pengiriman pesan dibatalkan: ' . $error);
+            return;
+        }
+
+        $isGroup = (bool) ($message->is_group ?? false) || str_ends_with($rawNumber, '@g.us');
 
         if ($isGroup) {
-            $number = trim((string) $message->number);
+            $number = $rawNumber;
             $targetLabel = '[Grup ' . ($message->name ?: $number) . ']';
         } else {
-            $rawNumber = trim((string) $message->number);
             if ($rawNumber !== '' && $rawNumber[0] === '+') {
                 $number = substr($rawNumber, 1);
             } elseif (str_starts_with($rawNumber, '62')) {

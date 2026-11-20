@@ -144,7 +144,7 @@
                     @forelse($messages as $m)
                         @php
                             $num = (string) $m->number;
-                            $isGrp = (bool) ($m->is_group || str_contains($num, '@g.us') || str_contains($num, '-'));
+                            $isGrp = $m->is_group_target;
                             $displayNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                         @endphp
                         <tr wire:key="msg-{{ $m->id }}" class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
@@ -415,7 +415,7 @@
     @if($showViewModal && $viewingMessage)
         @php
             $vNum = (string) $viewingMessage->number;
-            $vIsGroup = (bool) ($viewingMessage->is_group || str_contains($vNum, '@g.us') || str_contains($vNum, '-'));
+            $vIsGroup = $viewingMessage->is_group_target;
             $vDisplayNum = $vIsGroup ? $vNum : (($vNum !== '' && $vNum[0] === '+') ? $vNum : '+62' . $vNum);
         @endphp
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-900/50 dark:bg-black/75 backdrop-blur-[1px] overflow-y-auto" x-data @keydown.escape.window="$wire.set('showViewModal', false)">

@@ -88,6 +88,15 @@ function formatJid(target) {
   target = target.trim();
   if (!target) return "";
 
+  // Explicitly ignore / disallow status broadcast and newsletters
+  if (
+    target === "status@broadcast" ||
+    target.endsWith("@broadcast") ||
+    target.endsWith("@newsletter")
+  ) {
+    return "";
+  }
+
   // Already a full WhatsApp JID (personal or group)
   if (target.endsWith("@s.whatsapp.net") || target.endsWith("@g.us")) {
     return target;
@@ -383,6 +392,17 @@ async function createClient(id) {
       if (!msg || msg.key.fromMe) return;
 
       const remoteJid = msg.key.remoteJid || "";
+
+      // Exclude WhatsApp Status / Stories, broadcasts, and newsletters
+      if (
+        !remoteJid ||
+        remoteJid === "status@broadcast" ||
+        remoteJid.endsWith("@broadcast") ||
+        remoteJid.endsWith("@newsletter")
+      ) {
+        return;
+      }
+
       const isGroup = remoteJid.endsWith("@g.us");
       const senderJid = isGroup ? (msg.key.participant || remoteJid) : remoteJid;
       const cleanSender = senderJid.replace(/@.*$/, "");
@@ -697,7 +717,9 @@ app.get("/api/groups/:id", async (req, res) => {
 
   try {
     const groupData = await clients[id].groupFetchAllParticipating();
-    const groups = Object.values(groupData).map((g) => ({
+    const groups = Object.values(groupData)
+      .filter((g) => g && g.id && g.id.endsWith("@g.us") && !g.id.includes("broadcast"))
+      .map((g) => ({
       id: g.id,
       subject: g.subject || "(Tanpa Nama)",
       creation: g.creation || 0,

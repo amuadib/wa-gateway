@@ -125,9 +125,7 @@ class MessageManager extends Component
 
         $this->resetValidation();
         $this->editingId = $msg->id;
-        $this->formTargetType = ($msg->is_group || str_contains((string) $msg->number, '@g.us') || str_contains((string) $msg->number, '-'))
-            ? 'group'
-            : 'personal';
+        $this->formTargetType = $msg->is_group_target ? 'group' : 'personal';
         $this->formToken = (string) $msg->token;
         $this->formNumber = (string) $msg->number;
         $this->formName = (string) ($msg->name ?? '');
@@ -206,7 +204,15 @@ class MessageManager extends Component
             ]);
 
             $cleanNumber = trim($this->formNumber);
-            if (!str_contains($cleanNumber, '@') && !str_contains($cleanNumber, '-')) {
+            if (
+                $cleanNumber === 'status@broadcast' ||
+                str_ends_with($cleanNumber, '@broadcast') ||
+                str_ends_with($cleanNumber, '@newsletter')
+            ) {
+                $this->addError('formNumber', 'Status WA dan Channel tidak didukung sebagai tujuan grup.');
+                return;
+            }
+            if (!str_contains($cleanNumber, '@')) {
                 $cleanNumber .= '@g.us';
             }
         } else {
@@ -322,8 +328,8 @@ class MessageManager extends Component
             $out = fopen('php://output', 'w');
             fputcsv($out, ['ID', 'Device', 'Tipe', 'Nama/Grup', 'Tujuan/JID', 'Pengirim (Grup)', 'Pesan', 'Status', 'Error', 'Waktu']);
             foreach ($rows as $row) {
-                $isGrp = (bool) ($row->is_group || str_contains((string) $row->number, '@g.us') || str_contains((string) $row->number, '-'));
                 $num = (string) $row->number;
+                $isGrp = (bool) ($row->is_group || str_ends_with($num, '@g.us'));
                 $formattedNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                 fputcsv($out, [
                     $row->id,
@@ -349,8 +355,17 @@ class MessageManager extends Component
             return '';
         }
 
-        // WhatsApp group target (JID or contains hyphen)
-        if (str_ends_with($number, '@g.us') || str_contains($number, '-')) {
+        // WhatsApp status, broadcast, channel exclusion
+        if (
+            $number === 'status@broadcast' ||
+            str_ends_with($number, '@broadcast') ||
+            str_ends_with($number, '@newsletter')
+        ) {
+            return '';
+        }
+
+        // WhatsApp group target (must end with @g.us)
+        if (str_ends_with($number, '@g.us')) {
             return $number;
         }
 
@@ -367,6 +382,10 @@ class MessageManager extends Component
     protected function baseQuery()
     {
         return Message::query()
+            // Selalu kecualikan status WA, broadcast list, dan channel
+            ->where('number', '!=', 'status@broadcast')
+            ->where('number', 'not like', '%@broadcast%')
+            ->where('number', 'not like', '%@newsletter%')
             ->when($this->search !== '', function ($q) {
                 $term = '%' . trim($this->search) . '%';
                 $q->where(function ($sub) use ($term) {
@@ -382,14 +401,12 @@ class MessageManager extends Component
                 if ($this->targetFilter === 'group') {
                     $q->where(function ($sub) {
                         $sub->where('is_group', true)
-                            ->orWhere('number', 'like', '%@g.us')
-                            ->orWhere('number', 'like', '%-%');
+                            ->orWhere('number', 'like', '%@g.us');
                     });
                 } else {
                     $q->where(function ($sub) {
                         $sub->where('is_group', false)
-                            ->where('number', 'not like', '%@g.us')
-                            ->where('number', 'not like', '%-%');
+                            ->where('number', 'not like', '%@g.us');
                     });
                 }
             })

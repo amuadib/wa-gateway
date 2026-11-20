@@ -32,12 +32,21 @@ class Message extends Model
      */
     public function getIsGroupTargetAttribute(): bool
     {
+        $num = trim((string) $this->number);
+        if (
+            $num === '' ||
+            $num === 'status@broadcast' ||
+            str_ends_with($num, '@broadcast') ||
+            str_ends_with($num, '@newsletter')
+        ) {
+            return false;
+        }
+
         if ($this->is_group) {
             return true;
         }
 
-        $num = (string) $this->number;
-        return str_ends_with($num, '@g.us') || str_contains($num, '-');
+        return str_ends_with($num, '@g.us');
     }
 
     /**

@@ -30,7 +30,7 @@ class AcceptMessageController extends Controller
                 if ($cleanNum === '') {
                     continue;
                 }
-                $isGroup = str_ends_with($cleanNum, '@g.us') || str_contains($cleanNum, '-');
+                $isGroup = str_ends_with($cleanNum, '@g.us');
                 $inserts[] = [
                     'token' => $data['token'],
                     'number' => $cleanNum,
@@ -67,7 +67,7 @@ class AcceptMessageController extends Controller
                 ];
             }
             $data['number'] = $cleanNum;
-            $data['is_group'] = str_ends_with($cleanNum, '@g.us') || str_contains($cleanNum, '-');
+            $data['is_group'] = str_ends_with($cleanNum, '@g.us');
             \App\Models\Message::create($data);
         }
 
@@ -84,8 +84,17 @@ class AcceptMessageController extends Controller
             return '';
         }
 
-        // WhatsApp group target (e.g. 120363025123456789@g.us or 628123-456789)
-        if (str_ends_with($number, '@g.us') || str_contains($number, '-')) {
+        // WhatsApp status, broadcast, channel exclusion
+        if (
+            $number === 'status@broadcast' ||
+            str_ends_with($number, '@broadcast') ||
+            str_ends_with($number, '@newsletter')
+        ) {
+            return '';
+        }
+
+        // WhatsApp group target (must end with @g.us)
+        if (str_ends_with($number, '@g.us')) {
             return $number;
         }
 
