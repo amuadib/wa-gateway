@@ -37,6 +37,11 @@ class User extends Authenticatable
         return $this->hasMany(Message::class);
     }
 
+    public function devices(): HasMany
+    {
+        return $this->hasMany(BaileySession::class, 'user_id');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

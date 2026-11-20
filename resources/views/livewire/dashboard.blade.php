@@ -340,14 +340,20 @@
                     @forelse($recentMessages as $m)
                         @php
                             $num = (string) $m->number;
-                            $displayNum = ($num !== '' && $num[0] === '+') ? $num : '+62' . $num;
+                            $isGrp = (bool) ($m->is_group || str_ends_with($num, '@g.us'));
+                            $displayNum = $isGrp ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                         @endphp
                         <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                             <td class="px-5 py-3 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                 {{ $tokenNames[$m->token] ?? Str::limit($m->token, 14) }}
                             </td>
                             <td class="px-5 py-3 whitespace-nowrap">
-                                <div class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-medium text-slate-900 dark:text-slate-100 tabular-nums">{{ $displayNum }}</span>
+                                    @if($isGrp)
+                                        <span class="rounded-full bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.2 text-[9px] font-medium text-purple-700 dark:text-purple-300 ring-1 ring-inset ring-purple-200 dark:ring-purple-500/20">Grup</span>
+                                    @endif
+                                </div>
                                 @if($m->name)
                                     <div class="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">{{ $m->name }}</div>
                                 @endif

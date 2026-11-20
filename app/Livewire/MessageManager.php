@@ -56,6 +56,15 @@ class MessageManager extends Component
     public bool $showViewModal = false;
     public ?int $viewingId = null;
 
+    protected function getUserDeviceIds(): ?array
+    {
+        $user = auth()->user();
+        if (!$user || $user->isAdmin()) {
+            return null;
+        }
+        return BaileySession::where('user_id', $user->id)->pluck('id')->toArray();
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -107,7 +116,18 @@ class MessageManager extends Component
         $this->formToken = Token::value('token') ?? '';
         $this->formNumber = '';
         $this->formName = '';
-        $this->formSessionId = '';
+
+        $userDeviceIds = $this->getUserDeviceIds();
+        $defaultSession = '';
+        if ($userDeviceIds !== null) {
+            $defaultSession = BaileySession::whereIn('id', $userDeviceIds)->where('status', 'connected')->value('id')
+                ?? BaileySession::whereIn('id', $userDeviceIds)->value('id')
+                ?? '';
+        } else {
+            $defaultSession = BaileySession::where('status', 'connected')->value('id') ?? '';
+        }
+
+        $this->formSessionId = $defaultSession;
         $this->formMessage = '';
         $this->formGroupJid = '';
         $this->deviceGroups = [];
@@ -117,7 +137,13 @@ class MessageManager extends Component
 
     public function openEditModal(int $id): void
     {
-        $msg = Message::findOrFail($id);
+        $userDeviceIds = $this->getUserDeviceIds();
+        $msgQuery = Message::query();
+        if ($userDeviceIds !== null) {
+            $msgQuery->whereIn('sessionId', $userDeviceIds);
+        }
+        $msg = $msgQuery->findOrFail($id);
+
         if ((int) $msg->sent !== 0) {
             $this->dispatch('notify', type: 'error', message: 'Hanya pesan dalam antrian yang dapat diedit.');
             return;
@@ -145,14 +171,25 @@ class MessageManager extends Component
 
     public function loadDeviceGroups(BaileysService $baileys): void
     {
+        $userDeviceIds = $this->getUserDeviceIds();
         $targetSession = $this->formSessionId;
+
         if (empty($targetSession)) {
-            $first = BaileySession::where('status', 'connected')->value('id');
+            $firstQuery = BaileySession::where('status', 'connected');
+            if ($userDeviceIds !== null) {
+                $firstQuery->whereIn('id', $userDeviceIds);
+            }
+            $first = $firstQuery->value('id');
             if ($first) {
                 $targetSession = $first;
                 $this->formSessionId = $first;
             } else {
-                $this->dispatch('notify', type: 'error', message: 'Tidak ada device WhatsApp yang terhubung.');
+                $this->dispatch('notify', type: 'error', message: 'Tidak ada device WhatsApp Anda yang terhubung.');
+                return;
+            }
+        } else {
+            if ($userDeviceIds !== null && !in_array($targetSession, $userDeviceIds, true)) {
+                $this->dispatch('notify', type: 'error', message: 'Anda tidak memiliki akses ke device ini.');
                 return;
             }
         }
@@ -187,6 +224,22 @@ class MessageManager extends Component
 
     public function saveMessage(): void
     {
+        $userDeviceIds = $this->getUserDeviceIds();
+        if ($userDeviceIds !== null) {
+            if (empty($userDeviceIds)) {
+                $this->addError('formSessionId', 'Anda belum memiliki device WhatsApp. Buat device terlebih dahulu di menu Device.');
+                return;
+            }
+            if (!empty($this->formSessionId) && !in_array($this->formSessionId, $userDeviceIds, true)) {
+                $this->addError('formSessionId', 'Device yang dipilih bukan milik Anda.');
+                return;
+            }
+            if (empty($this->formSessionId)) {
+                $this->formSessionId = BaileySession::whereIn('id', $userDeviceIds)->where('status', 'connected')->value('id')
+                    ?? $userDeviceIds[0];
+            }
+        }
+
         $isGroup = ($this->formTargetType === 'group');
 
         if ($isGroup) {
@@ -246,7 +299,12 @@ class MessageManager extends Component
         ];
 
         if ($this->editingId) {
-            $msg = Message::findOrFail($this->editingId);
+            $msgQuery = Message::query();
+            if ($userDeviceIds !== null) {
+                $msgQuery->whereIn('sessionId', $userDeviceIds);
+            }
+            $msg = $msgQuery->findOrFail($this->editingId);
+
             if ((int) $msg->sent !== 0) {
                 $this->dispatch('notify', type: 'error', message: 'Pesan sudah diproses dan tidak bisa diubah.');
                 $this->showFormModal = false;
@@ -270,7 +328,12 @@ class MessageManager extends Component
 
     public function retrySingle(int $id): void
     {
-        Message::where('id', $id)->update([
+        $userDeviceIds = $this->getUserDeviceIds();
+        $query = Message::where('id', $id);
+        if ($userDeviceIds !== null) {
+            $query->whereIn('sessionId', $userDeviceIds);
+        }
+        $query->update([
             'sent' => 0,
             'status' => 'PENDING',
             'error' => null,
@@ -280,7 +343,12 @@ class MessageManager extends Component
 
     public function deleteSingle(int $id): void
     {
-        Message::where('id', $id)->delete();
+        $userDeviceIds = $this->getUserDeviceIds();
+        $query = Message::where('id', $id);
+        if ($userDeviceIds !== null) {
+            $query->whereIn('sessionId', $userDeviceIds);
+        }
+        $query->delete();
         if ($this->viewingId === $id) {
             $this->showViewModal = false;
             $this->viewingId = null;
@@ -294,7 +362,13 @@ class MessageManager extends Component
             return;
         }
 
-        $count = Message::whereIn('id', $this->selected)->update([
+        $userDeviceIds = $this->getUserDeviceIds();
+        $query = Message::whereIn('id', $this->selected);
+        if ($userDeviceIds !== null) {
+            $query->whereIn('sessionId', $userDeviceIds);
+        }
+
+        $count = $query->update([
             'sent' => 0,
             'status' => 'PENDING',
             'error' => null,
@@ -310,15 +384,24 @@ class MessageManager extends Component
             return;
         }
 
-        $count = Message::whereIn('id', $this->selected)->delete();
+        $userDeviceIds = $this->getUserDeviceIds();
+        $query = Message::whereIn('id', $this->selected);
+        if ($userDeviceIds !== null) {
+            $query->whereIn('sessionId', $userDeviceIds);
+        }
+
+        $count = $query->delete();
         $this->clearSelection();
         $this->dispatch('notify', type: 'success', message: "{$count} pesan berhasil dihapus.");
     }
 
     public function exportCsv(): StreamedResponse
     {
+        $userDeviceIds = $this->getUserDeviceIds();
         $query = !empty($this->selected)
-            ? Message::whereIn('id', $this->selected)->latest('created_at')
+            ? Message::whereIn('id', $this->selected)
+                ->when($userDeviceIds !== null, fn ($q) => $q->whereIn('sessionId', $userDeviceIds))
+                ->latest('created_at')
             : $this->baseQuery();
 
         $rows = $query->get(['id', 'sessionId', 'name', 'number', 'is_group', 'sender', 'message', 'status', 'error', 'created_at']);
@@ -381,11 +464,14 @@ class MessageManager extends Component
 
     protected function baseQuery()
     {
+        $userDeviceIds = $this->getUserDeviceIds();
+
         return Message::query()
             // Selalu kecualikan status WA, broadcast list, dan channel
             ->where('number', '!=', 'status@broadcast')
             ->where('number', 'not like', '%@broadcast%')
             ->where('number', 'not like', '%@newsletter%')
+            ->when($userDeviceIds !== null, fn ($q) => $q->whereIn('sessionId', $userDeviceIds))
             ->when($this->search !== '', function ($q) {
                 $term = '%' . trim($this->search) . '%';
                 $q->where(function ($sub) use ($term) {
@@ -426,16 +512,34 @@ class MessageManager extends Component
 
     public function render()
     {
+        $userDeviceIds = $this->getUserDeviceIds();
+
         $tokens = Cache::remember('tokens_map', now()->addMinutes(30), fn () => Token::pluck('name', 'token')->toArray());
-        $devices = BaileySession::orderBy('id')->pluck('id')->toArray();
-        $viewingMessage = $this->viewingId ? Message::with('app')->find($this->viewingId) : null;
+
+        $devicesQuery = BaileySession::orderBy('id');
+        if ($userDeviceIds !== null) {
+            $devicesQuery->whereIn('id', $userDeviceIds);
+        }
+        $devices = $devicesQuery->pluck('id')->toArray();
+
+        $viewingQuery = Message::with('app');
+        if ($userDeviceIds !== null) {
+            $viewingQuery->whereIn('sessionId', $userDeviceIds);
+        }
+        $viewingMessage = $this->viewingId ? $viewingQuery->find($this->viewingId) : null;
+
+        $queuedQuery = Message::where('sent', 0);
+        if ($userDeviceIds !== null) {
+            $queuedQuery->whereIn('sessionId', $userDeviceIds);
+        }
+        $queuedCount = $queuedQuery->count();
 
         return view('livewire.message-manager', [
             'messages' => $this->baseQuery()->paginate($this->perPage),
             'tokens' => $tokens,
             'devices' => $devices,
             'viewingMessage' => $viewingMessage,
-            'queuedCount' => Message::where('sent', 0)->count(),
+            'queuedCount' => $queuedCount,
         ]);
     }
 }

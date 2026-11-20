@@ -51,7 +51,13 @@ class Dashboard extends Component
 
     public function render(BaileysService $baileys)
     {
-        $counts = DB::table('messages')
+        $user = auth()->user();
+        $isAdmin = $user?->isAdmin();
+        $myDeviceIds = ($user && !$isAdmin)
+            ? BaileySession::where('user_id', $user->id)->pluck('id')->toArray()
+            : null;
+
+        $countsQuery = DB::table('messages')
             ->selectRaw("
                 COUNT(*) as total,
                 SUM(CASE WHEN sent = 0 THEN 1 ELSE 0 END) as queued,
@@ -59,8 +65,13 @@ class Dashboard extends Component
                 SUM(CASE WHEN status = '3' THEN 1 ELSE 0 END) as delivered,
                 SUM(CASE WHEN status = '4' THEN 1 ELSE 0 END) as `read`,
                 SUM(CASE WHEN status = 'FAILED' OR sent = 99 THEN 1 ELSE 0 END) as failed
-            ")
-            ->first();
+            ");
+
+        if ($myDeviceIds !== null) {
+            $countsQuery->whereIn('sessionId', $myDeviceIds);
+        }
+
+        $counts = $countsQuery->first();
 
         $stats = [
             'total' => (int) ($counts->total ?? 0),
@@ -71,15 +82,27 @@ class Dashboard extends Component
             'failed' => (int) ($counts->failed ?? 0),
         ];
 
-        $devices = BaileySession::with('grup')->orderByRaw("FIELD(status, 'Connected', 'Pending', 'Disconnected')")->get();
+        $devicesQuery = BaileySession::with('grup', 'creator')
+            ->orderByRaw("FIELD(status, 'Connected', 'Pending', 'Disconnected')");
+
+        if ($myDeviceIds !== null) {
+            $devicesQuery->where('user_id', $user->id);
+        }
+
+        $devices = $devicesQuery->get();
         $connectedDevices = $devices->where('status', 'Connected')->count();
 
         $tokenNames = Cache::remember('tokens_map', now()->addMinutes(30), fn () => Token::pluck('name', 'token')->toArray());
 
-        $recentMessages = Message::query()
+        $recentMessagesQuery = Message::query()
             ->latest('created_at')
-            ->limit(8)
-            ->get();
+            ->limit(8);
+
+        if ($myDeviceIds !== null) {
+            $recentMessagesQuery->whereIn('sessionId', $myDeviceIds);
+        }
+
+        $recentMessages = $recentMessagesQuery->get();
 
         $engine = $baileys->health();
         $recentError = !($engine['online'] ?? false)

@@ -11,9 +11,15 @@ class BaileySession extends Model
     protected $primaryKey = 'id';
     public $incrementing = false;
     public $timestamps = false;
+    protected $guarded = [];
 
     public function grup(): BelongsTo
     {
         return $this->belongsTo(Group::class, 'group_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

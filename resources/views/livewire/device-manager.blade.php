@@ -126,7 +126,12 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h3 class="text-sm font-semibold text-slate-900 dark:text-white truncate">{{ $device->id }}</h3>
-                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ $device->grup->nama ?? 'Tanpa Kelompok' }}</p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                    {{ $device->grup->nama ?? 'Tanpa Kelompok' }}
+                                    @if(auth()->user()?->isAdmin() && $device->creator)
+                                        &middot; <span class="font-medium text-slate-600 dark:text-slate-300">Creator: {{ $device->creator->name }}</span>
+                                    @endif
+                                </p>
                             </div>
                             <span class="shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-inset
                                 {{ $isConnected ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-200 dark:ring-emerald-500/20' : ($isPending ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-200 dark:ring-amber-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-200 dark:ring-rose-500/20') }}">

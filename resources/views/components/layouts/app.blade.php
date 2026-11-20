@@ -121,8 +121,14 @@
 
             {{-- Navigation Menu --}}
             @php
-                $queuedNavCount = \App\Models\Message::where('sent', 0)->count();
-                $isAdmin = auth()->user()?->isAdmin();
+                $user = auth()->user();
+                $isAdmin = $user?->isAdmin();
+                if ($user && !$isAdmin) {
+                    $myDeviceIds = \App\Models\BaileySession::where('user_id', $user->id)->pluck('id');
+                    $queuedNavCount = \App\Models\Message::where('sent', 0)->whereIn('sessionId', $myDeviceIds)->count();
+                } else {
+                    $queuedNavCount = \App\Models\Message::where('sent', 0)->count();
+                }
             @endphp
             <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
                 <div>

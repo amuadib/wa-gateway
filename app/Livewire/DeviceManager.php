@@ -15,11 +15,14 @@ use Livewire\Component;
 class DeviceManager extends Component
 {
     public string $groupFilter = '';
+
     public string $statusFilter = 'all';
 
     // Create Modal
     public bool $showCreateModal = false;
+
     public string $deviceId = '';
+
     public string $groupId = '';
 
     // QR Zoom Modal
@@ -31,13 +34,18 @@ class DeviceManager extends Component
         if ($user->isAdmin()) {
             return null;
         }
+
         return $user->managedGroupIds();
     }
 
     public function canManage(BaileySession $device): bool
     {
         $user = auth()->user();
-        return $user->isAdmin() || in_array((int) $device->group_id, $user->managedGroupIds(), true);
+        if (! $user) {
+            return false;
+        }
+
+        return $user->isAdmin() || (int) $device->user_id === (int) $user->id;
     }
 
     public function openCreateModal(): void
@@ -62,8 +70,9 @@ class DeviceManager extends Component
         ]);
 
         $allowed = $this->allowedGroupIds();
-        if ($allowed !== null && !in_array((int) $this->groupId, $allowed, true)) {
+        if ($allowed !== null && ! in_array((int) $this->groupId, $allowed, true)) {
             $this->addError('groupId', 'Anda tidak memiliki izin untuk kelompok ini.');
+
             return;
         }
 
@@ -72,12 +81,13 @@ class DeviceManager extends Component
         BaileySession::create([
             'id' => trim($this->deviceId),
             'group_id' => (int) $this->groupId,
+            'user_id' => auth()->id(),
             'status' => 'Pending',
         ]);
 
         $this->showCreateModal = false;
 
-        if (!empty($res['status'])) {
+        if (! empty($res['status'])) {
             $this->dispatch('notify', type: 'success', message: "Device {$this->deviceId} dibuat. Tunggu QR muncul untuk scan.");
         } else {
             $this->dispatch('notify', type: 'error', message: $res['message'] ?? 'Device tersimpan di DB, tetapi gagal menghubungi engine Baileys.');
@@ -87,18 +97,19 @@ class DeviceManager extends Component
     public function reconnectDevice(string $id, BaileysService $baileys): void
     {
         $device = BaileySession::findOrFail($id);
-        if (!$this->canManage($device)) {
+        if (! $this->canManage($device)) {
             $this->dispatch('notify', type: 'error', message: 'Anda tidak memiliki izin mengelola device ini.');
+
             return;
         }
 
         $device->update(['status' => 'Pending', 'qr' => '']);
         $res = $baileys->reconnectSession($id);
 
-        if (!empty($res['connected'])) {
+        if (! empty($res['connected'])) {
             $device->update(['status' => 'Connected', 'qr' => '', 'disconnected_at' => null]);
             $this->dispatch('notify', type: 'success', message: "Device {$id} berhasil tersambung kembali.");
-        } elseif (!empty($res['status'])) {
+        } elseif (! empty($res['status'])) {
             $this->dispatch('notify', type: 'success', message: $res['message'] ?? "Reconnect {$id} dimulai. Cek QR jika diminta.");
         } else {
             $this->dispatch('notify', type: 'error', message: $res['message'] ?? 'Gagal melakukan reconnect.');
@@ -108,10 +119,16 @@ class DeviceManager extends Component
     public function syncStatus(string $id, BaileysService $baileys): void
     {
         $device = BaileySession::findOrFail($id);
+        if (! $this->canManage($device)) {
+            $this->dispatch('notify', type: 'error', message: 'Anda tidak memiliki izin memeriksa status device ini.');
+
+            return;
+        }
+
         $res = $baileys->validateSession($id);
 
-        if (!empty($res['status'])) {
-            $newStatus = !empty($res['connected']) ? 'Connected' : 'Disconnected';
+        if (! empty($res['status'])) {
+            $newStatus = ! empty($res['connected']) ? 'Connected' : 'Disconnected';
             $update = ['status' => $newStatus];
             if ($newStatus === 'Connected') {
                 $update['qr'] = '';
@@ -127,8 +144,9 @@ class DeviceManager extends Component
     public function deleteDevice(string $id, BaileysService $baileys): void
     {
         $device = BaileySession::findOrFail($id);
-        if (!$this->canManage($device)) {
+        if (! $this->canManage($device)) {
             $this->dispatch('notify', type: 'error', message: 'Anda tidak memiliki izin menghapus device ini.');
+
             return;
         }
 
@@ -166,13 +184,15 @@ class DeviceManager extends Component
 
     public function render(BaileysService $baileys)
     {
+        $user = auth()->user();
         $allowed = $this->allowedGroupIds();
         $groups = Group::query()
             ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
             ->orderBy('nama')
             ->get();
 
-        $devices = BaileySession::with('grup')
+        $devices = BaileySession::with('grup', 'creator')
+            ->when($user && ! $user->isAdmin(), fn ($q) => $q->where('user_id', $user->id))
             ->when($this->groupFilter !== '', fn ($q) => $q->where('group_id', $this->groupFilter))
             ->when($this->statusFilter !== 'all', fn ($q) => $q->where('status', $this->statusFilter))
             ->orderByRaw("FIELD(status, 'Connected', 'Pending', 'Disconnected')")
