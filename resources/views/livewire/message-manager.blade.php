@@ -188,6 +188,29 @@
                                 @endif
                             </td>
                             <td class="px-3 py-3 align-top max-w-xs">
+                                @if($m->has_media)
+                                    <div class="mb-1.5 flex items-center gap-2">
+                                        @if($m->is_image_media)
+                                            <a href="{{ $m->media_url }}" target="_blank" class="group relative block overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0" title="Klik untuk membuka gambar ukuran penuh">
+                                                <img src="{{ $m->media_url }}" alt="Media" class="h-11 w-11 object-cover transition group-hover:scale-105">
+                                            </a>
+                                        @elseif($m->media_type === 'document')
+                                            <a href="{{ $m->media_url }}" target="_blank" download class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                                <svg class="h-3.5 w-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                                                <span class="truncate max-w-[120px]">{{ $m->media_name ?: 'Unduh Dokumen' }}</span>
+                                            </a>
+                                        @elseif($m->media_type === 'audio')
+                                            <audio controls class="h-7 w-44">
+                                                <source src="{{ $m->media_url }}">
+                                            </audio>
+                                        @elseif($m->media_type === 'video')
+                                            <a href="{{ $m->media_url }}" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                                <span>Putar Video</span>
+                                            </a>
+                                        @endif
+                                    </div>
+                                @endif
                                 <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{{ $m->message }}</p>
                                 @if($m->error)
                                     <p class="mt-1 text-[11px] text-rose-600 dark:text-rose-400 truncate" title="{{ $m->error }}">{{ $m->error }}</p>
@@ -488,6 +511,54 @@
                             </div>
                         @endif
                     </dl>
+
+                    @if($viewingMessage->has_media)
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-slate-400 dark:text-slate-500 font-medium">Lampiran Media ({{ ucfirst($viewingMessage->media_type) }})</span>
+                                <a href="{{ $viewingMessage->media_url }}" target="_blank" download class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                                    <span>Buka / Unduh File</span>
+                                </a>
+                            </div>
+
+                            @if($viewingMessage->is_image_media)
+                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-2 flex justify-center overflow-hidden">
+                                    <a href="{{ $viewingMessage->media_url }}" target="_blank" title="Klik untuk membuka ukuran penuh">
+                                        <img src="{{ $viewingMessage->media_url }}" alt="Preview Media" class="max-h-72 w-auto object-contain rounded-lg shadow-sm">
+                                    </a>
+                                </div>
+                            @elseif($viewingMessage->media_type === 'document')
+                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-3.5 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-10 w-10 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-semibold text-slate-900 dark:text-white">{{ $viewingMessage->media_name ?: 'Dokumen WhatsApp' }}</div>
+                                            <div class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Format file dokumen</div>
+                                        </div>
+                                    </div>
+                                    <a href="{{ $viewingMessage->media_url }}" target="_blank" download class="btn-secondary text-xs py-1.5 px-3">
+                                        Unduh
+                                    </a>
+                                </div>
+                            @elseif($viewingMessage->media_type === 'audio')
+                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-3 flex items-center gap-3">
+                                    <audio controls class="w-full">
+                                        <source src="{{ $viewingMessage->media_url }}">
+                                        Browser Anda tidak mendukung audio player.
+                                    </audio>
+                                </div>
+                            @elseif($viewingMessage->media_type === 'video')
+                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-black/90 p-2 flex justify-center">
+                                    <video controls class="max-h-72 w-auto rounded-lg">
+                                        <source src="{{ $viewingMessage->media_url }}">
+                                    </video>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                     <div>
                         <div class="flex items-center justify-between mb-1.5">

@@ -63,10 +63,42 @@ class Message extends Model
             return $this->name ? "{$this->name} ({$num})" : $num;
         }
 
+        if (str_ends_with($num, '@lid')) {
+            return $num;
+        }
+
         if ($num[0] === '+') {
             return $num;
         }
 
         return '+62' . $num;
+    }
+
+    /**
+     * Get accessible public URL for the stored media file.
+     */
+    public function getMediaUrlAttribute(): ?string
+    {
+        if (empty($this->media_path)) {
+            return null;
+        }
+
+        return asset('storage/' . $this->media_path);
+    }
+
+    /**
+     * Determine whether the message has attached media.
+     */
+    public function getHasMediaAttribute(): bool
+    {
+        return !empty($this->media_path);
+    }
+
+    /**
+     * Determine whether the media is an image.
+     */
+    public function getIsImageMediaAttribute(): bool
+    {
+        return $this->media_type === 'image';
     }
 }

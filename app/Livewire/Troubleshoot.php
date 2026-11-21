@@ -54,6 +54,7 @@ class Troubleshoot extends Component
             'fix_sessions_dir' => $service->fixSessionsDir(),
             'test_storage_write' => $service->testStorageWrite(),
             'generate_app_key' => $service->generateAppKey(),
+            'create_storage_link' => $service->createStorageLink(),
             default => ['ok' => false, 'message' => "Aksi '{$action}' tidak dikenal.", 'output' => null],
         };
 

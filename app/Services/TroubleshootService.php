@@ -602,6 +602,26 @@ class TroubleshootService
             'guide' => $hasKey ? null : 'Jalankan php artisan key:generate di terminal atau klik tombol aksi.',
         ];
 
+        // 5. Storage Public Media & Symlink
+        $mediaStoragePath = storage_path('app/public/whatsapp_media');
+        if (! is_dir($mediaStoragePath)) {
+            @mkdir($mediaStoragePath, 0775, true);
+        }
+        $isMediaWritable = is_dir($mediaStoragePath) && is_writable($mediaStoragePath);
+        $publicLinkPath = public_path('storage');
+        $hasLink = file_exists($publicLinkPath);
+
+        $mediaStatus = ($isMediaWritable && $hasLink) ? 'ok' : ($isMediaWritable ? 'warning' : 'error');
+        $items['storage_media'] = [
+            'name' => 'Penyimpanan Media WhatsApp (storage/app/public)',
+            'status' => $mediaStatus,
+            'value' => ($isMediaWritable && $hasLink) ? 'Siap & Terhubung' : (! $hasLink ? 'Symlink Belum Dibuat' : 'Tidak Dapat Menulis'),
+            'detail' => $hasLink ? "Storage publik siap menampung foto/dokumen ({$mediaStoragePath})." : 'Jalankan php artisan storage:link agar foto dapat diakses via web.',
+            'can_fix_directly' => ! $hasLink,
+            'actions' => $hasLink ? [] : ['create_storage_link'],
+            'guide' => $hasLink ? null : 'Jalankan php artisan storage:link di terminal server atau klik tombol aksi.',
+        ];
+
         return $items;
     }
 
@@ -846,6 +866,29 @@ class TroubleshootService
             return [
                 'ok' => false,
                 'message' => 'Gagal generate key: '.$e->getMessage(),
+                'output' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Direct Action: Create storage symlink (php artisan storage:link)
+     */
+    public function createStorageLink(): array
+    {
+        try {
+            Artisan::call('storage:link');
+            $output = trim(Artisan::output());
+
+            return [
+                'ok' => true,
+                'message' => 'Symlink storage publik berhasil dibuat.',
+                'output' => $output ?: 'The [public/storage] link has been connected to [storage/app/public].',
+            ];
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'message' => 'Gagal membuat symlink storage: '.$e->getMessage(),
                 'output' => $e->getMessage(),
             ];
         }

@@ -21,7 +21,18 @@ const {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   DisconnectReason,
+  downloadMediaMessage,
 } = require("@whiskeysockets/baileys");
+
+// Storage directory for incoming WhatsApp media files
+const MEDIA_DIR = path.resolve(__dirname, "..", "storage", "app", "public", "whatsapp_media");
+function ensureMediaDir(subfolder = "") {
+  const target = subfolder ? path.join(MEDIA_DIR, subfolder) : MEDIA_DIR;
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target, { recursive: true });
+  }
+  return target;
+}
 
 // ===== Configuration (Unified with Laravel .env) =====
 function resolvePort() {
@@ -427,15 +438,105 @@ async function createClient(id) {
         } catch (_) {}
       }
 
-      const text =
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
-        msg.message?.videoMessage?.caption ||
-        msg.message?.documentMessage?.caption ||
+      // Detect media message type
+      let mediaType = null;
+      let mediaPath = null;
+      let mediaName = null;
+      const m = msg.message;
+      let mediaMessageObj = null;
+
+      if (m?.imageMessage) {
+        mediaType = "image";
+        mediaMessageObj = m.imageMessage;
+      } else if (m?.documentMessage) {
+        mediaType = "document";
+        mediaMessageObj = m.documentMessage;
+        mediaName = m.documentMessage.fileName || "dokumen";
+      } else if (m?.videoMessage) {
+        mediaType = "video";
+        mediaMessageObj = m.videoMessage;
+      } else if (m?.audioMessage) {
+        mediaType = "audio";
+        mediaMessageObj = m.audioMessage;
+      } else if (m?.stickerMessage) {
+        mediaType = "sticker";
+        mediaMessageObj = m.stickerMessage;
+      }
+
+      let text =
+        m?.conversation ||
+        m?.extendedTextMessage?.text ||
+        m?.imageMessage?.caption ||
+        m?.videoMessage?.caption ||
+        m?.documentMessage?.caption ||
         null;
 
-      if (!text) return;
+      // Fallback label if text caption is empty but media is present
+      if (!text && mediaType) {
+        if (mediaType === "image") text = "[Foto / Gambar]";
+        else if (mediaType === "document") text = `[Dokumen: ${mediaName || "File"}]`;
+        else if (mediaType === "audio") text = "[Pesan Suara / Audio]";
+        else if (mediaType === "video") text = "[Video]";
+        else if (mediaType === "sticker") text = "[Stiker]";
+      }
+
+      // Ignore non-text, non-media events (e.g. protocol messages)
+      if (!text && !mediaType) return;
+
+      // Attempt to download and store media file locally
+      if (mediaType && mediaMessageObj) {
+        try {
+          const buffer = await downloadMediaMessage(
+            msg,
+            "buffer",
+            {},
+            {
+              logger: { level: "silent", info: () => {}, warn: () => {}, error: () => {}, trace: () => {}, debug: () => {} },
+              reuploadRequest: sock.updateMediaMessage,
+            }
+          );
+
+          if (buffer && buffer.length > 0) {
+            const today = new Date().toISOString().slice(0, 7); // e.g. "2026-11"
+            const subDir = ensureMediaDir(today);
+
+            // Determine file extension
+            let ext = "bin";
+            const mime = (mediaMessageObj.mimetype || "").toLowerCase();
+            if (mediaType === "image") {
+              ext = mime.includes("png") ? "png" : (mime.includes("webp") ? "webp" : "jpg");
+            } else if (mediaType === "document") {
+              if (mediaName && mediaName.includes(".")) {
+                ext = mediaName.split(".").pop().toLowerCase();
+              } else if (mime.includes("pdf")) {
+                ext = "pdf";
+              } else if (mime.includes("word") || mime.includes("docx")) {
+                ext = "docx";
+              } else if (mime.includes("excel") || mime.includes("xlsx")) {
+                ext = "xlsx";
+              }
+            } else if (mediaType === "audio") {
+              ext = mime.includes("mp4") || mime.includes("m4a") ? "m4a" : "ogg";
+            } else if (mediaType === "video") {
+              ext = "mp4";
+            } else if (mediaType === "sticker") {
+              ext = "webp";
+            }
+
+            const cleanMsgId = (msg.key.id || Date.now().toString()).replace(/[^a-zA-Z0-9_-]/g, "");
+            const fileName = `${Date.now()}_${cleanMsgId}.${ext}`;
+            const fullFilePath = path.join(subDir, fileName);
+
+            fs.writeFileSync(fullFilePath, buffer);
+            mediaPath = `whatsapp_media/${today}/${fileName}`;
+            if (!mediaName) {
+              mediaName = fileName;
+            }
+          }
+        } catch (downloadErr) {
+          console.warn(`[${id}] Failed to download media for message ${msg.key.id}:`, downloadErr.message);
+        }
+      }
 
       await sendWebhook({
         sessionId: id,
@@ -452,6 +553,9 @@ async function createClient(id) {
             status: "received",
             quotedId: quotedStanzaId,
             phoneNumber: resolvedPn ? resolvedPn.replace(/@.*$/, "") : null,
+            mediaType: mediaType,
+            mediaPath: mediaPath,
+            mediaName: mediaName,
           },
         },
         timestamp: msg.messageTimestamp,

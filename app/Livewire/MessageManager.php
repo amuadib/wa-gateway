@@ -404,18 +404,19 @@ class MessageManager extends Component
                 ->latest('created_at')
             : $this->baseQuery();
 
-        $rows = $query->get(['id', 'sessionId', 'name', 'number', 'is_group', 'sender', 'message', 'status', 'error', 'created_at']);
+        $rows = $query->get(['id', 'sessionId', 'name', 'number', 'is_group', 'sender', 'message', 'media_type', 'media_path', 'status', 'error', 'created_at']);
         $filename = 'pesan-wa-' . now()->format('Ymd-His') . '.csv';
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['ID', 'Device', 'Tipe', 'Nama/Grup', 'Tujuan/JID', 'Pengirim (Grup)', 'Pesan', 'Status', 'Error', 'Waktu']);
+            fputcsv($out, ['ID', 'Device', 'Tipe', 'Nama/Grup', 'Tujuan/JID', 'Pengirim (Grup)', 'Pesan', 'Media', 'Status', 'Error', 'Waktu']);
             foreach ($rows as $row) {
                 $num = (string) $row->number;
                 $isGrp = (bool) ($row->is_group || str_ends_with($num, '@g.us'));
                 $isLid = str_ends_with($num, '@lid');
                 $formattedNum = ($isGrp || $isLid) ? $num : (($num !== '' && $num[0] === '+') ? $num : '+62' . $num);
                 $tipeLabel = $isGrp ? 'Grup WA' : ($isLid ? 'Personal (LID)' : 'Personal');
+                $mediaInfo = $row->media_type ? ucfirst($row->media_type) . ($row->media_path ? ' (' . asset('storage/' . $row->media_path) . ')' : '') : '';
                 fputcsv($out, [
                     $row->id,
                     $row->sessionId,
@@ -424,6 +425,7 @@ class MessageManager extends Component
                     $formattedNum,
                     $row->sender ? '+' . $row->sender : '',
                     $row->message,
+                    $mediaInfo,
                     $row->status,
                     $row->error,
                     $row->created_at,
